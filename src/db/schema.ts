@@ -167,6 +167,14 @@ export const repos = pgTable(
       .defaultNow(),
     disconnectedAt: timestamp('disconnected_at', { withTimezone: true }),
 
+    /**
+     * When the builder agreed that code from this repo may be sent to a model
+     * that runs off this machine (0009). Null means no: questions fall back to
+     * rule-based ones. Per repo, because client and NDA work is exactly where
+     * this matters.
+     */
+    llmAllowedAt: timestamp('llm_allowed_at', { withTimezone: true }),
+
     backfillStatus: text('backfill_status').notNull().default('pending'),
     lastPushSeenAt: timestamp('last_push_seen_at', { withTimezone: true }),
   },
@@ -719,6 +727,12 @@ export const skillOutcomes = pgTable(
     source: text('source').notNull().default('builtin'),
     /** Set when an outcome leaves the list; kept so old sightings still resolve. */
     retiredAt: timestamp('retired_at', { withTimezone: true }),
+    /**
+     * For model-drafted outcomes (0009): words and snippets that suggest code
+     * touches this outcome. A cheap filter before a model is asked to confirm,
+     * so cost scales with likely matches, not with repo size.
+     */
+    lookFor: jsonb('look_for'),
     createdAt: createdAt(),
   },
   (t) => [
@@ -790,6 +804,12 @@ export const outcomeSightings = pgTable(
     authorship: text('authorship').notNull(),
     authorshipVersion: integer('authorship_version').notNull(),
     detectorVersion: integer('detector_version').notNull(),
+    /**
+     * For sightings found by reading the current code (model scans, 0009): whether
+     * the lines were written after the goal, from blame. Null means "go by
+     * scan_kind" (commit = after, snapshot = before), as rule sightings do.
+     */
+    writtenAfterGoal: boolean('written_after_goal'),
     seenAt: timestamp('seen_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -995,3 +1015,128 @@ export const jobs = pgTable(
       .where(sql`status = 'queued'`),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// 0009 — questions written by a connected model, practice answers, settings
+// ---------------------------------------------------------------------------
+
+/** The builder's own settings. Questions per week can be raised, never below 3 (builder's decision). */
+export const userSettings = pgTable(
+  'user_settings',
+  {
+    userId: uuid('user_id')
+      .primaryKey()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    questionsPerWeek: smallint('questions_per_week').notNull().default(3),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [check('user_settings_questions_per_week', sql`${t.questionsPerWeek} BETWEEN 3 AND 50`)],
+);
+
+/**
+ * Every call to a model (0009): what for, which provider and model, whether
+ * the cache answered it, and what it cost when the provider says. The daily
+ * cap is counted from here.
+ */
+export const llmCalls = pgTable(
+  'llm_calls',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    purpose: text('purpose').notNull(),
+    provider: text('provider').notNull(),
+    model: text('model'),
+    cacheKey: text('cache_key').notNull(),
+    cacheHit: boolean('cache_hit').notNull(),
+    ok: boolean('ok').notNull(),
+    error: text('error'),
+    durationMs: integer('duration_ms'),
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
+    costUsd: numeric('cost_usd', { precision: 10, scale: 6 }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('llm_calls_user_day_idx').on(t.userId, t.createdAt)],
+);
+
+/**
+ * A question about specific code (0009). The text is shown; the key points a
+ * good answer covers are kept for the judge (0011) and never shown here.
+ *
+ * Exactly one target: a sighting of an outcome, an outcome in the objective
+ * that nothing touches yet, or a dependency candidate (0001–0003).
+ */
+export const questions = pgTable(
+  'questions',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    repoId: uuid('repo_id')
+      .notNull()
+      .references(() => repos.id, { onDelete: 'cascade' }),
+    targetKind: text('target_kind').notNull(),
+    sightingId: uuid('sighting_id').references(() => outcomeSightings.id, { onDelete: 'cascade' }),
+    outcomeId: uuid('outcome_id').references(() => skillOutcomes.id, { onDelete: 'cascade' }),
+    candidateId: uuid('candidate_id').references(() => candidates.id, { onDelete: 'cascade' }),
+
+    text: text('text').notNull(),
+    /** The code the question is about: a pointer, never the code (G11). */
+    sha: char('sha', { length: 40 }),
+    path: text('path'),
+    lineStart: integer('line_start'),
+    lineEnd: integer('line_end'),
+    keyPoints: jsonb('key_points'),
+
+    foundBy: text('found_by').notNull(),
+    promptVersion: integer('prompt_version').notNull(),
+    provider: text('provider'),
+    model: text('model'),
+    cacheKey: text('cache_key'),
+
+    status: text('status').notNull().default('pending'),
+    skipCount: smallint('skip_count').notNull().default(0),
+    shownAt: timestamp('shown_at', { withTimezone: true }),
+    answeredAt: timestamp('answered_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check('questions_target_kind', oneOf(t.targetKind, ['outcome_sighting', 'outcome_untouched', 'candidate'])),
+    check(
+      'questions_one_target',
+      sql`(
+        (${t.targetKind} = 'outcome_sighting' AND ${t.sightingId} IS NOT NULL AND ${t.candidateId} IS NULL)
+        OR (${t.targetKind} = 'outcome_untouched' AND ${t.outcomeId} IS NOT NULL AND ${t.sightingId} IS NULL AND ${t.candidateId} IS NULL)
+        OR (${t.targetKind} = 'candidate' AND ${t.candidateId} IS NOT NULL AND ${t.sightingId} IS NULL)
+      )`,
+    ),
+    check('questions_found_by', oneOf(t.foundBy, ['model', 'rule'])),
+    check('questions_status', oneOf(t.status, ['pending', 'answered', 'expired'])),
+    uniqueIndex('questions_sighting_unq').on(t.userId, t.sightingId).where(sql`sighting_id IS NOT NULL`),
+    uniqueIndex('questions_candidate_unq').on(t.userId, t.candidateId).where(sql`candidate_id IS NOT NULL`),
+    uniqueIndex('questions_untouched_unq')
+      .on(t.userId, t.repoId, t.outcomeId)
+      .where(sql`target_kind = 'outcome_untouched'`),
+    index('questions_user_shown_idx').on(t.userId, t.shownAt),
+  ],
+);
+
+/**
+ * The builder's answer to a question (0009). Practice: private, never
+ * counted, and with no path to `evidence` or `skill_claims` (G3). The judge's
+ * feedback on it arrives with 0011.
+ */
+export const practiceAnswers = pgTable('practice_answers', {
+  id: id(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  questionId: uuid('question_id')
+    .notNull()
+    .references(() => questions.id, { onDelete: 'cascade' }),
+  answer: text('answer').notNull(),
+  createdAt: createdAt(),
+});
