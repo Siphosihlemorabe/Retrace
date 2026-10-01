@@ -296,7 +296,7 @@ Decisions the spec leaves open go back to the builder.
 | [0003](./features/0003-authorship.md) authorship: who made this change | 1 | built | Can we tell the builder's choice from their agent's, cheaply and honestly? |
 | [0004](./features/0004-inherited-settings-detector.md) inherited-settings detector | 1 | proposed | Does reading root-vs-HEAD state find more, and better, questions than history? |
 | [0005](./features/0005-explain-back.md) explain-back | 1 | proposed | Can a model judge an explanation of system-specific code well enough to coach? |
-| [0006](./features/0006-local-web-ui.md) local web UI | 1 | building | Can the builder comfortably take the two-week test? |
+| [0006](./features/0006-local-web-ui.md) local web UI | 1 | built | Can the builder comfortably take the two-week test? |
 | 0007 interview prep | 2 | not written | Does rehearsing on your own decisions make you better at defending them? |
 
 **Order and gates.**

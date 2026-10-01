@@ -9,7 +9,7 @@ cost, and whether you can explain it.
 **Status:** the capture loop runs locally. `npm run detect <repo>` finds dependency decisions
 in a local clone and says who made each change (you, your agent, a template, someone
 else). `npm run ask <repo>` asks about this week's few and stores decision records,
-learning goals and dismissals in Postgres. No server, no webhooks, no LLM yet.
+learning goals and dismissals in Postgres. `npm run ui` runs the same loop in a browser, local-only. No webhooks, no LLM yet.
 
 ---
 
@@ -107,7 +107,7 @@ by design, which is the wrong trade for a codebase built to be understood line b
 │   │   └── jobs/           Queue table and runner.
 │   └── db/                 schema.ts and the client. Schema is cross-cutting, so it
 │                           sits beside core rather than inside it.
-├── web/                    Vite + React frontend. Not started.
+├── web/                    Vite + React frontend: the local capture UI (0006).
 └── var/repos/              Clone cache. Git-ignored, disposable, rebuildable.
 ```
 
@@ -160,6 +160,7 @@ npm run db:migrate
 ```sh
 npm run dev          # server + worker, watch mode
 npm run detect <dir> # run the detector against a local clone, print candidates, write nothing
+npm run ui           # the same loop in a browser, at http://127.0.0.1:3000 (0006)
 npm run ask <dir>    # this week's questions; --manual, --calibration, --limit <n>
 npm run decisions    # what you have recorded, and what each record is missing
 npm run identities   # which git identities are yours; --me / --not-me <email> to correct

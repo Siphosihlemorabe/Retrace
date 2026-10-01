@@ -1,6 +1,6 @@
 # 0006 — Local web UI for the capture loop
 
-**Status:** building (2026-10-01). The builder chose to build straight on and review afterwards
+**Status:** built (2026-10-01). The builder chose to build straight on and review afterwards
 **Build order:** step 1, tradeoff capture (a second front end on 0002/0003, no new capability)
 **Writes to the database:** yes — the same writes as `npm run ask`, through the same core functions
 **Guardrails:** G1, G4, G5, G6, G7, G16, G18 (see [how-it-works](../how-it-works.md#guardrails))
@@ -97,18 +97,18 @@ feedback next to the field is the cheaper way to get that answer.
 - [x] Response types in one file, imported type-only by the web app
 
 **Web** — `web/`
-- [ ] Vite + React + TypeScript, its own tsconfig, included in `npm run typecheck`
-- [ ] Repos: add a local clone by path, pick one
-- [ ] Ask: identity setup, then this week's questions with the CLI's wording and options;
+- [x] Vite + React + TypeScript, its own tsconfig, included in `npm run typecheck`
+- [x] Repos: add a local clone by path, pick one
+- [x] Ask: identity setup, then this week's questions with the CLI's wording and options;
       the decision form with Choice prefilled; cost-check result and revise
-- [ ] Decisions: what is recorded and what each is missing
-- [ ] Calibration: the CLI's `--calibration` numbers
+- [x] Decisions: what is recorded and what each is missing
+- [x] Calibration: the CLI's `--calibration` numbers
 
 **Scripts**
-- [ ] `npm run ui`, `npm run dev`, `npm run dev:web`, `npm run build:web`
+- [x] `npm run ui`, `npm run dev`, `npm run dev:web`, `npm run build:web`
 
 **Tests**
-- [ ] API against the test database: register a repo, refresh, fetch questions, answer,
+- [x] API against the test database: register a repo, refresh, fetch questions, answer,
       revise; bad bodies get 400; foreign Host and non-JSON POSTs are refused
 
 **Not deliverables, on purpose:** auth, hosting, GitHub, styling beyond readable, a client
@@ -138,6 +138,12 @@ not the buttons.
   every answer against `questionFor()`, and anything else is a 400.
 - **`openSession` moved to `src/session.ts`**, shared by both entry points, so the server
   does not import from `cli/`.
+- **Checked in a real browser, read-only.** The page loads from `npm run ui`, lists both
+  registered repos, and opens on the identity question for `confetti-confectionery`. No
+  question was clicked: showing one spends the builder's weekly budget, and answering
+  writes records in their name. The full loop is covered by the API tests.
+- **"Questions per week" is adjustable on the page** (3, 5 or 10), for testing. The budget
+  logic is unchanged and 3 stays the default.
 - **A double answer is a 409**, not a second record, as in the CLI.
 
 ## Open questions

@@ -7,7 +7,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "tsx watch src/server/index.ts",
+    "dev": "node --env-file-if-exists=.env --import tsx --watch src/server/index.ts",
+    "dev:web": "vite --config web/vite.config.ts",
+    "build:web": "vite build --config web/vite.config.ts",
+    "ui": "npm run build:web && node --env-file-if-exists=.env --import tsx src/server/index.ts",
     "dev:worker": "tsx watch src/worker/index.ts",
     "detect": "node --env-file-if-exists=.env --import tsx src/cli/index.ts",
     "ask": "node --env-file-if-exists=.env --import tsx src/cli/ask.ts",
@@ -18,7 +21,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "typecheck": "tsc -p tsconfig.server.json --noEmit",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p web/tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
