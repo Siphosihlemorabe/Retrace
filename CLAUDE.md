@@ -54,6 +54,19 @@ load-bearing signal across the whole product.
 4. **Public profile / embed.** Distribution as much as feature.
 5. **Verified profiles and job-spec matching.** A bet, not a roadmap item.
 
+**Changed 2026-10-01, at the builder's request: step 3 comes forward.** The product is
+used *while* building, not only after. The builder sets learning goals when a project
+starts ("I want to learn Docker and SQL"). Each goal is broken into concrete outcomes
+(joins, aggregates, multi-stage builds…). Commits are checked as they arrive, and questions
+ask about the specific code that covers, or misses, those outcomes. Steps 1 and 2 still
+stand; goals become the main input to them. See
+[0007](./docs/features/0007-project-goals-and-outcomes.md),
+[0008](./docs/features/0008-github-app.md) and [0009](./docs/features/0009-model-questions.md).
+
+The rule that keeps this honest: **code being present is not learning.** An outcome only
+counts as progress when the builder wrote it, and only as understood when they can
+explain it. "Your agent wrote a JOIN" is something to ask about, never something to credit.
+
 **The scope rule:** if a feature's value depends on someone other than the builder
 using the product, it is not current scope. Say so rather than building it.
 
@@ -268,7 +281,19 @@ then two weeks of `npm run ask` on real repos. 0002's and 0003's "How we will kn
 worked" sections say what to read at the end. The cost check's fixtures become real answers
 then.
 
-Proposed after that: [0004](./docs/features/0004-inherited-settings-detector.md),
+**Proposed, for the builder's review (2026-10-01):** the direction change above, in three
+specs, to build in this order. 0007 is what everything attaches to, and 0009 fixes the
+weakness the builder named (questions not detailed enough):
+
+1. [0007 — Project goals and learning outcomes](./docs/features/0007-project-goals-and-outcomes.md):
+   SQL, Docker and Node/REST outcome lists, rule-based detection on each new commit, coverage
+2. [0009 — Detailed questions via a connected model](./docs/features/0009-model-questions.md):
+   the builder's own Claude Code by default (`claude -p`, tools off), Ollama or an API key
+   as alternatives; cached, capped, never evidence
+3. [0008 — GitHub App](./docs/features/0008-github-app.md): commits arrive on every push
+
+Also built: [0006 — Local web UI](./docs/features/0006-local-web-ui.md) (`npm run ui`).
+Deprioritised: [0004](./docs/features/0004-inherited-settings-detector.md). Partly superseded by 0009:
 [0005](./docs/features/0005-explain-back.md). See [how-it-works](./docs/how-it-works.md#roadmap-against-the-build-order).
 
 Previous: [0001 — Dependency decision detector](./docs/features/0001-dependency-decision-detector.md) — built, with its follow-up.

@@ -1,6 +1,8 @@
 # 0005 — Explain-back (CLI)
 
-**Status:** proposed — for review
+**Status:** partly superseded (2026-10-01). The LLM plumbing and question generation moved into
+[0009](./0009-model-questions.md), attached to 0007's goals. What remains here is the **judge**
+(grading an answer against the code, with its hand-labelled agreement test), which is future work
 **Build order:** step 1, tradeoff capture (the "explain-back" half)
 **Writes to the database:** yes — new practice tables, `analysis_cache`, learning goals
 **Guardrails:** G3, G5, G7, G11, G13, G14, G15, G16, G17 (see [how-it-works](../how-it-works.md#guardrails))
