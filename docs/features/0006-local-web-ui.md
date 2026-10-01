@@ -87,7 +87,7 @@ feedback next to the field is the cheaper way to get that answer.
 ## Deliverables
 
 **Shared orchestration** — `src/core/decisions/capture.ts`
-- [ ] `refreshCandidates`, `costContextFor`, `answerCandidate`: moved out of `src/cli/ask.ts`,
+- [x] `refreshCandidates`, `costContextFor`, `answerCandidate`: moved out of `src/cli/ask.ts`,
       which then calls them
 
 **API** — `src/server/`

@@ -6,31 +6,28 @@
  *   3. Ask about this week's few, best first. Store what comes back.
  *
  * `--manual` skips the detector. `--calibration` prints what the answers say
- * about the detector. All logic worth testing lives in core/; this file is
- * transport.
+ * about the detector. The steps live in core/decisions/capture.ts, shared with
+ * the web UI (0006); this file is terminal transport.
  */
 import { parseArgs } from 'node:util';
 
-import { weeklyBudget, markShown, nextCandidates, skipCandidate } from '../core/decisions/budget.js';
+import { markShown, nextCandidates, weeklyBudget } from '../core/decisions/budget.js';
 import { calibration } from '../core/decisions/calibration.js';
-import { persistCandidates } from '../core/decisions/candidates.js';
+import {
+  answerCandidate,
+  candidateCostContext,
+  costContextFor,
+  refreshCandidates,
+  type Answer,
+  type RepoCostContext,
+} from '../core/decisions/capture.js';
 import { checkCost, type CostContext, type CostVerdict } from '../core/decisions/cost-check.js';
-import { goalTitle, questionFor, type AnswerAction } from '../core/decisions/framing.js';
+import { questionFor, type AnswerAction } from '../core/decisions/framing.js';
 import { loadIdentitySet, recordIdentity, unresolvedIdentities } from '../core/decisions/identity.js';
 import { registerLocalClone, type LocalClone } from '../core/decisions/local.js';
-import {
-  dismissCandidate,
-  recordDecision,
-  recordLearningGoal,
-  reviseDecision,
-  type DecisionRole,
-  type DecisionShape,
-} from '../core/decisions/record.js';
+import { recordDecision, reviseDecision, type DecisionRole, type DecisionShape } from '../core/decisions/record.js';
 import type { StoredCandidate } from '../core/detect/candidate-row.js';
-import { detectDependencyDecisions } from '../core/detect/dependency.js';
-import { parseManifest } from '../core/detect/manifest.js';
-import { rank } from '../core/detect/rank.js';
-import { authorIdentities, GitError, openRepo, showFile, trackedFiles, type Repo } from '../core/git/index.js';
+import { authorIdentities, GitError, openRepo, type Repo } from '../core/git/index.js';
 import { createPrompter, type Prompter } from './prompt.js';
 import { openSession, SetupError, type Session } from './session.js';
 
@@ -43,8 +40,6 @@ Usage: npm run ask <path-to-repo> [options]
   --calibration        what your answers say about the detector (no path needed)
   --limit <n>          questions per rolling week (default 3)
 `.trim();
-
-const MANIFEST = 'package.json';
 
 async function main(argv: string[]): Promise<number> {
   const { values, positionals } = parseArgs({
@@ -132,14 +127,7 @@ async function askThisWeek(
   prompt: Prompter,
   limit: number,
 ): Promise<void> {
-  const identities = await loadIdentitySet(session.db, session.userId);
-  const detected = await detectDependencyDecisions(repo, { manifestPath: MANIFEST, identities });
-  const ranked = rank(detected.candidates);
-  await persistCandidates(session.db, ranked.ranked, {
-    repoId: clone.id,
-    userId: session.userId,
-    manifestPath: MANIFEST,
-  });
+  await refreshCandidates(session.db, repo, clone, session.userId);
 
   const budget = await weeklyBudget(session.db, session.userId, { limit });
   const next = await nextCandidates(session.db, session.userId, { limit, repoId: clone.id });
@@ -152,7 +140,7 @@ async function askThisWeek(
     return;
   }
 
-  const costCtx = await costContextFor(repo);
+  const repoCost = await costContextFor(repo);
   for (const [i, candidate] of next.entries()) {
     await markShown(session.db, candidate.id);
     const q = questionFor(candidate, budget.shownThisWeek + i + 1, budget.limit);
@@ -166,13 +154,13 @@ async function askThisWeek(
 
     const option = q.options.find((o) => o.key === key);
     if (option === undefined) continue;
-    const done = await answer(session, clone, prompt, candidate, option.action, q.choice, costCtx);
+    const done = await answer(session, clone, prompt, candidate, option.action, q.choice, repoCost);
     if (!done) return;
   }
   console.log('');
 }
 
-/** Returns false when input ended mid-answer. */
+/** Turns a chosen option into an Answer, prompting for whatever it needs. False at end of input. */
 async function answer(
   session: Session,
   clone: LocalClone,
@@ -180,94 +168,92 @@ async function answer(
   candidate: StoredCandidate,
   action: AnswerAction,
   choice: string,
-  costCtx: Omit<CostContext, 'choice' | 'alternative'>,
+  repoCost: RepoCostContext,
 ): Promise<boolean> {
+  let given: Answer;
   switch (action.kind) {
-    case 'skip': {
-      const status = await skipCandidate(session.db, candidate.id);
-      console.log(status === 'expired' ? '  Skipped three times — it won’t come up again.' : '  Skipped. It may come back.');
-      return true;
-    }
+    case 'skip':
+      given = { kind: 'skip' };
+      break;
     case 'dismiss':
-      await dismissCandidate(session.db, candidate.id, action.reason, null);
-      console.log('  Noted — that tells the detector it got this one wrong.');
-      return true;
+      given = { kind: 'dismiss', reason: action.reason };
+      break;
     case 'not_a_choice_or_trivia': {
       const which = await prompt.choose(
         '  Which?  [c] there was no real alternative   [l] nothing depends on it\n  > ',
         ['c', 'l'],
       );
       if (which === null) return false;
-      await dismissCandidate(session.db, candidate.id, which === 'c' ? 'not_a_choice' : 'not_load_bearing', null);
-      console.log('  Noted.');
-      return true;
+      given = { kind: 'dismiss', reason: which === 'c' ? 'not_a_choice' : 'not_load_bearing' };
+      break;
     }
-    case 'goal': {
+    case 'goal':
       // One follow-up, no more: admitting a gap must not cost more than
       // dismissing (0002 open question 2).
-      const note = await prompt.text('What would you want to understand about it? (enter to skip)\n ');
-      await recordLearningGoal(session.db, {
-        userId: session.userId,
-        candidate,
-        title: goalTitle(candidate),
-        note,
-      });
-      console.log(`  Learning goal: ${goalTitle(candidate)}`);
-      return true;
-    }
-    case 'decision': {
-      const ctx: CostContext = {
-        ...costCtx,
-        choice: candidate.signals.packageName,
-        alternative: candidate.signals.displaced,
-      };
-      await captureDecision(session, clone, prompt, action.role, choice, ctx, candidate);
-      return true;
-    }
+      given = { kind: 'goal', note: await prompt.text('What would you want to understand about it? (enter to skip)\n ') };
+      break;
+    case 'decision':
+      given = { kind: 'decision', role: action.role, shape: await promptShape(prompt, choice) };
+      break;
   }
+
+  const cost = candidateCostContext(candidate, repoCost);
+  const result = await answerCandidate(session.db, {
+    userId: session.userId,
+    repoId: clone.id,
+    candidate,
+    answer: given,
+    cost,
+  });
+
+  switch (result.kind) {
+    case 'skipped':
+      console.log(result.status === 'expired' ? '  Skipped three times — it won’t come up again.' : '  Skipped. It may come back.');
+      break;
+    case 'dismissed':
+      console.log('  Noted — that tells the detector it got this one wrong.');
+      break;
+    case 'goal':
+      console.log(`  Learning goal: ${result.title}`);
+      break;
+    case 'decision':
+      if (given.kind === 'decision') await offerRevisions(session, prompt, result.decisionId, given.shape, result.verdict, cost);
+      break;
+  }
+  return true;
 }
 
-async function captureDecision(
-  session: Session,
-  clone: LocalClone,
-  prompt: Prompter,
-  role: DecisionRole,
-  choice: string | null,
-  costCtx: CostContext,
-  candidate?: StoredCandidate,
-  anchor?: { sha?: string; path?: string },
-): Promise<void> {
+async function promptShape(prompt: Prompter, choice: string | null): Promise<DecisionShape> {
   console.log('');
-  const shape: DecisionShape = {
+  return {
     choice: await prompt.text('Choice', choice),
     context: await prompt.text('Context'),
     optionsConsidered: await prompt.text('Options'),
     cost: await prompt.text('Cost'),
     revisitCondition: await prompt.text('Revisit', null),
   };
+}
 
-  // Manual entry learns what was chosen from the answer itself.
-  if (costCtx.choice === '') costCtx = { ...costCtx, choice: shape.choice ?? 'this' };
-  let verdict = checkCost(shape.cost, costCtx);
-  const id = await recordDecision(session.db, {
-    userId: session.userId,
-    repoId: clone.id,
-    role,
-    shape,
-    verdict,
-    ...(candidate === undefined ? {} : { candidate }),
-    ...(anchor === undefined ? {} : { anchor }),
-  });
+/**
+ * The teaching moment. Revisions go through decision_revisions, so a better
+ * cost never silently replaces the first one.
+ */
+async function offerRevisions(
+  session: Session,
+  prompt: Prompter,
+  decisionId: string,
+  shape: DecisionShape,
+  first: CostVerdict,
+  cost: CostContext,
+): Promise<void> {
+  let verdict = first;
   printVerdict(verdict);
-
-  // The teaching moment. Revisions go through decision_revisions, so a better
-  // cost never silently replaces the first one.
   while (!(verdict.namesLoss && verdict.systemSpecific)) {
     const again = await prompt.choose('  Revise cost? [y/N] ', ['y', 'n', '']);
     if (again !== 'y') break;
     shape.cost = await prompt.text('Cost', shape.cost);
-    verdict = checkCost(shape.cost, costCtx);
-    await reviseDecision(session.db, id, shape, verdict);
+    verdict = checkCost(shape.cost, cost);
+    await reviseDecision(session.db, decisionId, shape, verdict);
     printVerdict(verdict);
   }
   console.log('  Saved.');
@@ -288,20 +274,21 @@ async function manualEntry(
   clone: LocalClone,
   prompt: Prompter,
   anchor: { sha?: string; path?: string },
-  costCtx: Omit<CostContext, 'choice' | 'alternative'>,
+  repoCost: RepoCostContext,
 ): Promise<void> {
   console.log('\n  A decision in your own words. Entered by hand, it stays a claim, not evidence.');
-  // No choice is known yet: captureDecision takes it from the first answer.
-  await captureDecision(
-    session,
-    clone,
-    prompt,
-    'made',
-    null,
-    { ...costCtx, choice: '', alternative: null },
-    undefined,
+  const shape = await promptShape(prompt, null);
+  const cost: CostContext = { ...repoCost, choice: shape.choice ?? 'this', alternative: null };
+  const verdict = checkCost(shape.cost, cost);
+  const id = await recordDecision(session.db, {
+    userId: session.userId,
+    repoId: clone.id,
+    role: 'made' satisfies DecisionRole,
+    shape,
+    verdict,
     anchor,
-  );
+  });
+  await offerRevisions(session, prompt, id, shape, verdict, cost);
 }
 
 async function printCalibration(session: Session): Promise<void> {
@@ -324,12 +311,6 @@ async function printCalibration(session: Session): Promise<void> {
     console.log(`\n  Decisions by role: ${c.byRole.map((r) => `${r.role} ${r.n}`).join(' · ')}`);
   }
   console.log('');
-}
-
-async function costContextFor(repo: Repo): Promise<Omit<CostContext, 'choice' | 'alternative'>> {
-  const [manifestSource, paths] = await Promise.all([showFile(repo, 'HEAD', MANIFEST), trackedFiles(repo)]);
-  const manifest = parseManifest(manifestSource);
-  return { packageNames: manifest === null ? [] : [...manifest.keys()], paths };
 }
 
 try {

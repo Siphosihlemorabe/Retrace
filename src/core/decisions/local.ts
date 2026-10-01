@@ -9,7 +9,7 @@
 import { realpathSync } from 'node:fs';
 import { basename } from 'node:path';
 
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 import { repos, users } from '../../db/schema.js';
 import type { Executor } from '../../db/types.js';
@@ -62,4 +62,23 @@ export async function registerLocalClone(db: Executor, repo: Repo): Promise<Loca
   if (row === undefined) throw new Error(`could not register ${path}`);
 
   return { id: row.id, path, rootSha, name };
+}
+
+/**
+ * Registered local clones. Repos have no user column — a local clone belongs
+ * to whoever runs this machine — which is fine for one builder and is the
+ * first thing to revisit if this ever serves two.
+ */
+export async function listLocalClones(db: Executor): Promise<LocalClone[]> {
+  const rows = await db
+    .select({ id: repos.id, path: repos.localPath, rootSha: repos.rootSha, name: repos.name })
+    .from(repos)
+    .where(eq(repos.source, 'local_clone'))
+    .orderBy(repos.name);
+  return rows.map((r) => ({ id: r.id, path: r.path ?? '', rootSha: r.rootSha ?? '', name: r.name }));
+}
+
+export async function getLocalClone(db: Executor, id: string): Promise<LocalClone | null> {
+  const [row] = (await listLocalClones(db)).filter((c) => c.id === id);
+  return row ?? null;
 }
