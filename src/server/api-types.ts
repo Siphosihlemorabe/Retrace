@@ -10,6 +10,8 @@ import type { CostVerdict } from '../core/decisions/cost-check.js';
 import type { Question } from '../core/decisions/framing.js';
 import type { PersistResult } from '../core/decisions/candidates.js';
 import type { AuthorIdentity } from '../core/git/index.js';
+import type { ModelScanResult } from '../core/outcomes/model-scan.js';
+import type { QuestionCard } from '../core/questions/view.js';
 
 export type { Answer, AnswerResult } from '../core/decisions/capture.js';
 export type { CostVerdict } from '../core/decisions/cost-check.js';
@@ -168,3 +170,44 @@ export interface CodeViewResponse {
 export interface LabelResponse {
   updated: number;
 }
+
+// --- 0009: model questions, settings, outcome lists ---------------------------
+
+export type { QuestionCard } from '../core/questions/view.js';
+export interface LlmStatusResponse {
+  provider: 'claude-cli' | 'ollama' | 'anthropic-api' | 'off';
+  model: string | null;
+  sendsCodeOffMachine: boolean;
+  callsToday: number;
+  dailyCap: number;
+  /** Set when RETRACE_LLM names something that can't be used. */
+  error: string | null;
+  questionsPerWeek: number;
+}
+
+export interface WeekResponse {
+  budget: { limit: number; shownThisWeek: number; remaining: number };
+  /** Whether this project's code may go to the connected model. Always true for a model on this machine. */
+  modelAllowed: boolean;
+  llm: Omit<LlmStatusResponse, 'questionsPerWeek'>;
+  questions: QuestionCard[];
+}
+
+export interface SkipResponse {
+  status: 'pending' | 'expired';
+}
+
+export interface DraftOutcomesResponse {
+  /** Null when no model could draft one; `reason` says why. */
+  outcomes: { name: string; description: string; lookFor: string[] }[] | null;
+  reason: 'off' | 'capped' | 'failed' | null;
+  message: string | null;
+}
+
+export interface SavedOutcomesResponse {
+  slugs: string[];
+  added: number;
+  retired: number;
+}
+
+export type ModelScanResponse = ModelScanResult;

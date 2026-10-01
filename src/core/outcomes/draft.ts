@@ -69,7 +69,7 @@ const slugPart = (s: string) =>
 
 export interface ReviewedOutcome extends DraftOutcome {
   /** Present when editing an outcome already saved; keeps its sightings attached. */
-  slug?: string;
+  slug?: string | undefined;
 }
 
 /**

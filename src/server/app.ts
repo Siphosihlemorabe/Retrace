@@ -5,6 +5,7 @@
  * and the terminal run the same code. Request bodies are untrusted and parsed
  * with Zod at the boundary (G16); nothing past this file sees raw input.
  */
+import { eq } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 
@@ -31,12 +32,36 @@ import { codeView } from '../core/outcomes/code-view.js';
 import { loadCoverage } from '../core/outcomes/coverage.js';
 import { setGoals } from '../core/outcomes/goals.js';
 import { relabelLines, scanNewCommits } from '../core/outcomes/scan.js';
+import { draftOutcomes, DraftOutcome, saveOutcomeList } from '../core/outcomes/draft.js';
+import { modelScan } from '../core/outcomes/model-scan.js';
+import { llmStatus, providerFromEnv, type Provider } from '../core/llm/index.js';
+import {
+  allowModelForRepo,
+  answerQuestion,
+  closeCandidateQuestion,
+  markQuestionShown,
+  modelAllowed,
+  nextQuestions,
+  questionBudget,
+  questionsPerWeek,
+  setQuestionsPerWeek,
+  skipQuestion,
+  MIN_PER_WEEK,
+} from '../core/questions/queue.js';
+import { questionCard } from '../core/questions/view.js';
+import { questions as questionsTable, skills } from '../db/schema.js';
 import type { Db } from '../db/types.js';
 import type {
   AnswerResponse,
   CalibrationResponse,
   CodeViewResponse,
   CoverageResponse,
+  DraftOutcomesResponse,
+  LlmStatusResponse,
+  ModelScanResponse,
+  SavedOutcomesResponse,
+  SkipResponse,
+  WeekResponse,
   GithubReadyResponse,
   LabelResponse,
   ScanResponse,
@@ -123,6 +148,12 @@ const LabelBody = z.object({
   label: z.enum(['agent', 'me']),
 });
 const Id = z.uuid();
+const SettingsBody = z.object({ questionsPerWeek: z.number().int().min(MIN_PER_WEEK).max(50) });
+const PracticeBody = z.object({ answer: z.string().trim().min(1).max(5000) });
+const OutcomeListBody = z.object({
+  outcomes: z.array(DraftOutcome.extend({ slug: z.string().max(200).optional() })).min(1).max(20),
+});
+const ScanBody = z.object({ skill: z.string().min(1).max(200) });
 const Limit = z.coerce.number().int().min(1).max(50).default(DEFAULT_WEEKLY_LIMIT);
 
 class BadRequest extends Error {}
@@ -241,6 +272,7 @@ export function createApp({ db, userId, login }: AppOptions): Hono {
       answer: normalized,
       cost: candidateCostContext(candidate, await costContextFor(repo)),
     });
+    await closeCandidateQuestion(db, userId, candidate.id);
     return c.json<AnswerResponse>(result);
   });
 
@@ -368,10 +400,111 @@ export function createApp({ db, userId, login }: AppOptions): Hono {
     return c.json<LabelResponse>({ updated: await relabelLines(scope, label) });
   });
 
+  // --- 0009: model questions, settings, outcome lists ---------------------------
+
+  /** The configured provider, or null when it is off or misconfigured (the status route says which). */
+  const provider = (): Provider | null => {
+    try {
+      return providerFromEnv();
+    } catch {
+      return null;
+    }
+  };
+  const ownQuestion = async (questionId: string) => {
+    const [q] = await db.select().from(questionsTable).where(eq(questionsTable.id, questionId));
+    if (q === undefined || q.userId !== userId) throw new NotFound('No such question.');
+    return q;
+  };
+  const skillBySlug = async (slug: string) => {
+    const [skill] = await db.select().from(skills).where(eq(skills.slug, slug));
+    if (skill === undefined) throw new NotFound('No such skill.');
+    return skill;
+  };
+
+  app.get('/api/llm', async (c) => {
+    const status = await llmStatus(db, userId);
+    return c.json<LlmStatusResponse>({ ...status, questionsPerWeek: await questionsPerWeek(db, userId) } as LlmStatusResponse);
+  });
+
+  app.put('/api/settings', async (c) => {
+    const { questionsPerWeek: n } = await body(c, SettingsBody);
+    return c.json({ questionsPerWeek: await setQuestionsPerWeek(db, userId, n) });
+  });
+
+  // The builder's yes, once per project, before its code goes to a model off this machine.
+  app.post('/api/repos/:id/llm-consent', async (c) => {
+    const { clone } = await cloneOr404(id(c));
+    await allowModelForRepo(db, clone.id);
+    return c.json({ ok: true });
+  });
+
+  app.get('/api/repos/:id/week', async (c) => {
+    const { clone, repo } = await cloneOr404(id(c));
+    const p = provider();
+    const list = await nextQuestions({ db, userId, repo, repoId: clone.id }, p);
+    const status = await llmStatus(db, userId);
+    return c.json<WeekResponse>({
+      budget: await questionBudget(db, userId),
+      modelAllowed: !status.sendsCodeOffMachine || (await modelAllowed(db, clone.id)),
+      llm: status as WeekResponse['llm'],
+      questions: await Promise.all(list.map((q) => questionCard(db, repo, q))),
+    });
+  });
+
+  app.post('/api/questions/:id/shown', async (c) => {
+    const q = await ownQuestion(id(c));
+    await markQuestionShown(db, userId, q.id);
+    return c.json({ ok: true });
+  });
+
+  app.post('/api/questions/:id/answer', async (c) => {
+    const q = await ownQuestion(id(c));
+    const { answer } = await body(c, PracticeBody);
+    await answerQuestion(db, userId, q.id, answer);
+    return c.json({ ok: true });
+  });
+
+  app.post('/api/questions/:id/skip', async (c) => {
+    const q = await ownQuestion(id(c));
+    return c.json<SkipResponse>({ status: await skipQuestion(db, userId, q.id) });
+  });
+
+  // Only the skill's name goes to the model; nothing is saved until the builder saves a list.
+  app.post('/api/skills/:slug/draft', async (c) => {
+    const skill = await skillBySlug(c.req.param('slug'));
+    const draft = await draftOutcomes(db, userId, skill.name, provider());
+    return c.json<DraftOutcomesResponse>(
+      draft.ok
+        ? { outcomes: draft.value.outcomes, reason: null, message: null }
+        : { outcomes: null, reason: draft.reason, message: draft.message },
+    );
+  });
+
+  app.put('/api/skills/:slug/outcomes', async (c) => {
+    const skill = await skillBySlug(c.req.param('slug'));
+    const { outcomes } = await body(c, OutcomeListBody);
+    try {
+      return c.json<SavedOutcomesResponse>(await saveOutcomeList(db, skill.id, outcomes));
+    } catch (e) {
+      throw new BadRequest((e as Error).message);
+    }
+  });
+
+  app.post('/api/repos/:id/model-scan', async (c) => {
+    const { clone, repo } = await cloneOr404(id(c));
+    const { skill: slug } = await body(c, ScanBody);
+    const skill = await skillBySlug(slug);
+    const llmAllowed = await modelAllowed(db, clone.id);
+    return c.json<ModelScanResponse>(await modelScan({ db, userId, repo, repoId: clone.id, llmAllowed }, skill.id, provider()));
+  });
+
   app.notFound((c) => c.json({ error: 'Not found.' }, 404));
   app.onError((error, c) => {
     if (error instanceof BadRequest || error instanceof GitError) return c.json({ error: error.message }, 400);
     if (error instanceof NotFound) return c.json({ error: error.message }, 404);
+    if (error instanceof Error && /is not open/.test(error.message)) {
+      return c.json({ error: 'That question is no longer open.' }, 409);
+    }
     if (error instanceof Error && /is not pending/.test(error.message)) {
       return c.json({ error: 'That question has already been answered.' }, 409);
     }
