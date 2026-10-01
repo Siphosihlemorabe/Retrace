@@ -140,6 +140,10 @@ describe('vocabulary matches the schema', () => {
     expect([...AUTHORSHIP_CLASSES].sort()).toEqual(allowed('candidates_introduced_by').sort());
   });
 
+  test('and exactly outcome_sightings_authorship', () => {
+    expect([...AUTHORSHIP_CLASSES].sort()).toEqual(allowed('outcome_sightings_authorship').sort());
+  });
+
   test('every detector kind is allowed by candidates_kind', () => {
     const kinds = allowed('candidates_kind');
     for (const kind of Object.keys(KIND_BONUS)) expect(kinds).toContain(kind);

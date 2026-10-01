@@ -29,6 +29,13 @@
       "when": 1790858442629,
       "tag": "0003_decisions_role_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790881646129,
+      "tag": "0004_goals_and_outcomes",
+      "breakpoints": true
     }
   ]
 }

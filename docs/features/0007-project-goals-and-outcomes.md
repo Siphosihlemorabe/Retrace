@@ -215,20 +215,20 @@ Per goal, per outcome, the strongest status reached:
 ## Deliverables
 
 **Schema** — new migration
-- [ ] `skill_outcomes` (skill, slug, name, description, ordinal), with the three built-in
+- [x] `skill_outcomes` (skill, slug, name, description, ordinal), with the three built-in
       skills and their aliases (`postgres`, `postgresql` → `sql`, and so on)
-- [ ] `learning_goals`: `kind` in (`gap`, `intent`), `repo_id`, `declared_at_sha`;
+- [x] `learning_goals`: `kind` in (`gap`, `intent`), `repo_id`, `declared_at_sha`;
       `learning_goal_outcomes` (goal, outcome, in objective), with edit history
-- [ ] `outcome_sightings` (outcome, repo, sha, path, lines, via, found by `rule`|`model`,
+- [x] `outcome_sightings` (outcome, repo, sha, path, lines, via, found by `rule`|`model`,
       detector version, seen at)
-- [ ] `line_labels` (repo, path, sha, lines, label `agent`|`me`, created at): the builder's
+- [x] `line_labels` (repo, path, sha, lines, label `agent`|`me`, created at): the builder's
       relabels
-- [ ] `commit_sightings.source` gains `local_scan`
+- [x] `commit_sightings.source` gains `local_scan`
 
 **Outcomes** — `src/core/outcomes/`
 - [x] Catalogue for SQL, Docker and Node/REST (32 outcomes), each detector with a positive
       and a negative fixture; `OUTCOMES_VERSION`
-- [ ] Sync the catalogue to tables
+- [x] Sync the catalogue to tables
 - [ ] Scan: unsighted commits → sight, authorship, added lines, detectors, sightings
 - [ ] Line authorship: `git blame` on highlighted ranges, cached per commit, relabels applied
 - [ ] Goals: declare (with backfill and a first scan), edit with history; other skills saved

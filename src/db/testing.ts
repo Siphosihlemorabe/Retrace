@@ -33,3 +33,20 @@ export async function openTestDb(): Promise<{ db: Db; pool: pg.Pool }> {
   const pool = new pg.Pool({ connectionString: testDatabaseUrl });
   return { db: drizzle(pool, { schema }), pool };
 }
+
+/**
+ * Drizzle wraps Postgres errors ("Failed query: …") and keeps the original on
+ * `cause`, with the violated constraint's name. This reads both, so a test can
+ * assert *which* guarantee refused a write.
+ */
+export async function rejectsWithConstraint(promise: Promise<unknown>, name: RegExp): Promise<void> {
+  try {
+    await promise;
+  } catch (error) {
+    const e = error as { message?: string; cause?: { message?: string; constraint?: string } };
+    const text = [e.message, e.cause?.message, e.cause?.constraint].filter(Boolean).join(' | ');
+    if (name.test(text)) return;
+    throw new Error(`rejected, but not by ${String(name)}: ${text}`);
+  }
+  throw new Error(`expected the write to be rejected by ${String(name)}, but it succeeded`);
+}

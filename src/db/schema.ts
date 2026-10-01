@@ -256,7 +256,7 @@ export const commitSightings = pgTable(
     unique('commit_sightings_repo_sha_unq').on(t.repoId, t.sha),
     check(
       'commit_sightings_source',
-      oneOf(t.source, ['webhook', 'backfill', 'manual_import']),
+      oneOf(t.source, ['webhook', 'backfill', 'manual_import', 'local_scan']),
     ),
   ],
 );
@@ -668,12 +668,178 @@ export const learningGoals = pgTable(
       .notNull()
       .defaultNow(),
     closedAt: timestamp('closed_at', { withTimezone: true }),
+
+    /**
+     * `gap`: "I didn't know that was a choice" (0002). `intent`: a goal the
+     * builder set for a project, before or while writing it (0007). For an
+     * intent, `opened_at` is when it was declared (server clock) and
+     * `declared_at_sha` is HEAD at that moment — the line between code that
+     * was already there and code written after the goal.
+     */
+    kind: text('kind').notNull().default('gap'),
+    repoId: uuid('repo_id').references(() => repos.id, { onDelete: 'cascade' }),
+    declaredAtSha: char('declared_at_sha', { length: 40 }),
   },
   (t) => [
     check(
       'learning_goals_status',
       oneOf(t.status, ['open', 'in_progress', 'done', 'abandoned']),
     ),
+    check('learning_goals_kind', oneOf(t.kind, ['gap', 'intent'])),
+    check(
+      'learning_goals_intent_fields',
+      sql`${t.kind} <> 'intent' OR (
+        ${t.repoId} IS NOT NULL AND ${t.skillId} IS NOT NULL AND ${t.declaredAtSha} IS NOT NULL
+      )`,
+    ),
+    // One goal per skill per project; a second "SQL" goal would split the percentage.
+    uniqueIndex('learning_goals_intent_unq')
+      .on(t.userId, t.repoId, t.skillId)
+      .where(sql`kind = 'intent'`),
+  ],
+);
+
+/**
+ * A skill's outcomes (0007): what "learning SQL" breaks into. Built-in lists
+ * live in code and are synced here; model-drafted lists the builder reviewed
+ * (0009) and lists the builder writes (later) live here too, told apart by
+ * `source`.
+ */
+export const skillOutcomes = pgTable(
+  'skill_outcomes',
+  {
+    id: id(),
+    skillId: uuid('skill_id')
+      .notNull()
+      .references(() => skills.id, { onDelete: 'cascade' }),
+    slug: text('slug').notNull().unique(),
+    name: text('name').notNull(),
+    description: text('description').notNull(),
+    ordinal: smallint('ordinal').notNull(),
+    source: text('source').notNull().default('builtin'),
+    /** Set when an outcome leaves the list; kept so old sightings still resolve. */
+    retiredAt: timestamp('retired_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check('skill_outcomes_source', oneOf(t.source, ['builtin', 'model_reviewed', 'builder'])),
+  ],
+);
+
+/** Which outcomes are in a goal's objective (0007): the ones the builder ticked. */
+export const learningGoalOutcomes = pgTable(
+  'learning_goal_outcomes',
+  {
+    goalId: uuid('goal_id')
+      .notNull()
+      .references(() => learningGoals.id, { onDelete: 'cascade' }),
+    outcomeId: uuid('outcome_id')
+      .notNull()
+      .references(() => skillOutcomes.id, { onDelete: 'cascade' }),
+    inObjective: boolean('in_objective').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.goalId, t.outcomeId] })],
+);
+
+/**
+ * Every change to an objective, kept. Unticking an outcome after touching it
+ * is allowed, and history shows it (0007 §2).
+ */
+export const learningGoalOutcomeChanges = pgTable('learning_goal_outcome_changes', {
+  id: id(),
+  goalId: uuid('goal_id')
+    .notNull()
+    .references(() => learningGoals.id, { onDelete: 'cascade' }),
+  outcomeId: uuid('outcome_id')
+    .notNull()
+    .references(() => skillOutcomes.id, { onDelete: 'cascade' }),
+  inObjective: boolean('in_objective').notNull(),
+  changedAt: createdAt(),
+});
+
+/**
+ * Code that touches an outcome (0007): a pointer, never the code (G11).
+ *
+ * A machine judgement, versioned and recomputable — kept out of `evidence` on
+ * purpose (decision 2, chosen by the builder), so a line the agent wrote can
+ * never be read as evidence of the builder's skill.
+ *
+ * `scan_kind`: `commit` for a commit scanned after the goal (the lines it
+ * added); `snapshot` for code already present when the goal was set (HEAD at
+ * that moment, attributed per line by blame).
+ */
+export const outcomeSightings = pgTable(
+  'outcome_sightings',
+  {
+    id: id(),
+    repoId: uuid('repo_id')
+      .notNull()
+      .references(() => repos.id, { onDelete: 'cascade' }),
+    outcomeId: uuid('outcome_id')
+      .notNull()
+      .references(() => skillOutcomes.id, { onDelete: 'cascade' }),
+    sha: char('sha', { length: 40 }).notNull(),
+    path: text('path').notNull(),
+    lineStart: integer('line_start').notNull(),
+    lineEnd: integer('line_end').notNull(),
+    via: text('via').notNull(),
+    foundBy: text('found_by').notNull().default('rule'),
+    scanKind: text('scan_kind').notNull(),
+    /** Who wrote these lines (0003 classes), from the commit or from blame. */
+    authorship: text('authorship').notNull(),
+    authorshipVersion: integer('authorship_version').notNull(),
+    detectorVersion: integer('detector_version').notNull(),
+    seenAt: timestamp('seen_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('outcome_sightings_unq').on(t.repoId, t.outcomeId, t.sha, t.path, t.lineStart, t.lineEnd),
+    check('outcome_sightings_via', oneOf(t.via, ['sql', 'orm', 'config', 'code'])),
+    check('outcome_sightings_found_by', oneOf(t.foundBy, ['rule', 'model'])),
+    check('outcome_sightings_scan_kind', oneOf(t.scanKind, ['commit', 'snapshot'])),
+    check(
+      'outcome_sightings_authorship',
+      oneOf(t.authorship, [
+        'builder',
+        'builder_with_agent',
+        'agent',
+        'template',
+        'automation',
+        'other_human',
+        'unknown',
+      ]),
+    ),
+    check('outcome_sightings_lines', sql`${t.lineStart} >= 1 AND ${t.lineEnd} >= ${t.lineStart}`),
+    index('outcome_sightings_repo_outcome_idx').on(t.repoId, t.outcomeId),
+  ],
+);
+
+/**
+ * The builder's own word on who wrote some lines (0007 §4): "an AI wrote
+ * this, though I committed it", or the reverse. Overrides blame for exactly
+ * these lines at this commit, and is shown as "you said".
+ */
+export const lineLabels = pgTable(
+  'line_labels',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    repoId: uuid('repo_id')
+      .notNull()
+      .references(() => repos.id, { onDelete: 'cascade' }),
+    sha: char('sha', { length: 40 }).notNull(),
+    path: text('path').notNull(),
+    lineStart: integer('line_start').notNull(),
+    lineEnd: integer('line_end').notNull(),
+    label: text('label').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check('line_labels_label', oneOf(t.label, ['agent', 'me'])),
+    check('line_labels_lines', sql`${t.lineStart} >= 1 AND ${t.lineEnd} >= ${t.lineStart}`),
+    index('line_labels_file_idx').on(t.repoId, t.path),
   ],
 );
 
