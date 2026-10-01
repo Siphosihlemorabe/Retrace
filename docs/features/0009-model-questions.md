@@ -147,9 +147,9 @@ with `source: builder`.
 ## Deliverables
 
 **Model connection** — `src/core/llm/`
-- [ ] Interface and the three adapters; `claude-cli` passes `--tools ""` and `--max-turns 1`
-- [ ] Zod validation; cache with the full key; call log; daily caps
-- [ ] Only `src/core/llm` spawns `claude` or imports the SDK (import-graph test)
+- [x] Interface and the three adapters; `claude-cli` passes `--tools ""` and `--max-turns 1`
+- [x] Zod validation; cache with the full key; call log; daily caps
+- [x] Only `src/core/llm` spawns `claude` or imports the SDK (import-graph test)
 - [ ] Consent per repo before code leaves the machine, naming the provider
 
 **Questions** — `src/core/questions/`
@@ -175,9 +175,9 @@ with `source: builder`.
 - [ ] Settings: provider, calls left today, questions per week (min 3)
 
 **Tests**
-- [ ] Each adapter against a fake (a stub `claude` on PATH, a fake HTTP server); no real model
+- [x] Each adapter against a fake (a stub `claude` on PATH, a fake HTTP server); no real model
       calls in `npm test`
-- [ ] Cache hit, version bump, a malformed result rejected and the fallback used, caps
+- [x] Cache hit, version bump, a malformed result rejected and the fallback used, caps
 - [ ] Copy checks: no model answer shown; key points never shown in this feature
 - [ ] **Manual:** ten real targets. Is each question only askable of *this* code, and is every
       line reference right? Target 8 of 10
@@ -199,6 +199,27 @@ who didn't write it, leave the builder's understanding as the only human part. T
 for practice, which is why nothing here counts. Counting starts at 0011's check.
 
 ---
+
+## Build notes
+
+- **No separate "explained" status.** This spec planned one ("written by you, and
+  answered"). The product direction the builder confirmed later defines *learned* as
+  documented (0010) plus a passed check (0011), and a separate 0009 status would compete
+  with that. Answers here are practice only.
+- **`claude -p` runs from an empty temp folder, with our own system prompt, and without
+  `--bare`.** Measured on 2026-10-01 with the builder's Claude Code (Opus 5.5), for a
+  one-line reply:
+  - Claude Code's default prompt: about $0.017.
+  - Our own short prompt: about $0.002.
+  - Our own prompt, but run from inside the Retrace folder: 6,414 input tokens and $0.052,
+    because Claude Code loads the project's `CLAUDE.md`. That would also have sent the
+    project's instructions to the model.
+  - `--bare` skips the login, so the call fails.
+- **On Windows `claude` is a `.cmd` shim**, which Node can only run through a shell. The
+  adapter quotes every argument itself; otherwise `--tools ""` arrives with its value lost.
+- **The API-key adapter does not enable server-side refusal fallbacks.** A refusal is
+  treated as "the model is unavailable" and falls back to a rule-based question, the
+  builder's chosen behaviour.
 
 ## Open questions
 
