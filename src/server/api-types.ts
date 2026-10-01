@@ -83,3 +83,88 @@ export interface DecisionsResponse {
 }
 
 export type CalibrationResponse = Calibration;
+
+// --- 0007: goals, coverage, code view ----------------------------------------
+
+export interface SkillView {
+  slug: string;
+  name: string;
+  outcomes: { slug: string; name: string; description: string }[];
+}
+
+export interface SkillsResponse {
+  skills: SkillView[];
+}
+
+export interface GithubReadyResponse {
+  ready: boolean;
+}
+
+export interface SetGoalsResponse {
+  declaredAtSha: string;
+  backfilled: number;
+  alreadyTouched: number;
+  goals: { goalId: string; skill: string; created: boolean; hasOutcomeList: boolean }[];
+}
+
+export interface ScanResponse {
+  commits: number;
+  sightings: number;
+}
+
+export interface CoverageResponse {
+  /** "commit N" positions for every SHA the coverage mentions. */
+  positions: Record<string, number>;
+  commitCount: number;
+  goals: {
+    goalId: string;
+    skill: { slug: string; name: string };
+    declaredAtSha: string | null;
+    declaredAt: string;
+    hasOutcomeList: boolean;
+    total: number;
+    learned: number;
+    percentLearned: number | null;
+    touched: number;
+    objective: { met: number; total: number };
+    outcomes: {
+      slug: string;
+      name: string;
+      description: string;
+      inObjective: boolean;
+      status: 'not_touched' | 'touched' | 'documented' | 'learned';
+      sightings: {
+        sha: string;
+        path: string;
+        lineStart: number;
+        lineEnd: number;
+        via: string;
+        foundBy: string;
+        authorship: string;
+        when: 'before_goal' | 'after_goal';
+      }[];
+    }[];
+  }[];
+}
+
+export interface CodeLineView {
+  n: number;
+  text: string;
+  authorship: string;
+  /** "you said", an agent's name, a template… */
+  actor: string | null;
+  relabelled: boolean;
+}
+
+export interface CodeViewResponse {
+  sha: string;
+  path: string;
+  /** Where in history this commit sits. */
+  position: number | null;
+  lines: CodeLineView[];
+  highlights: { start: number; end: number; outcome: string; name: string }[];
+}
+
+export interface LabelResponse {
+  updated: number;
+}

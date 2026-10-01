@@ -24,11 +24,24 @@ import { loadIdentitySet, recordIdentity, unresolvedIdentities } from '../core/d
 import { listDecisions, missingParts } from '../core/decisions/list.js';
 import { getLocalClone, listLocalClones, registerLocalClone } from '../core/decisions/local.js';
 import type { DecisionShape } from '../core/decisions/record.js';
-import { authorIdentities, GitError, openRepo } from '../core/git/index.js';
+import { authorIdentities, commitPositions, GitError, openRepo } from '../core/git/index.js';
+import { createGithubRepo, createProjectFolder, githubCliReady } from '../core/git/new-project.js';
+import { BUILTIN_SKILLS } from '../core/outcomes/catalog/index.js';
+import { codeView } from '../core/outcomes/code-view.js';
+import { loadCoverage } from '../core/outcomes/coverage.js';
+import { setGoals } from '../core/outcomes/goals.js';
+import { relabelLines, scanNewCommits } from '../core/outcomes/scan.js';
 import type { Db } from '../db/types.js';
 import type {
   AnswerResponse,
   CalibrationResponse,
+  CodeViewResponse,
+  CoverageResponse,
+  GithubReadyResponse,
+  LabelResponse,
+  ScanResponse,
+  SetGoalsResponse,
+  SkillsResponse,
   DecisionsResponse,
   IdentitiesResponse,
   ManualResponse,
@@ -84,6 +97,30 @@ const ManualBody = z.object({
       path: z.string().trim().min(1).max(1000).optional(),
     })
     .default({}),
+});
+const ProjectBody = z.object({
+  path: z.string().trim().min(1).max(1000),
+  github: z.enum(['private', 'public']).optional(),
+});
+const GoalsBody = z.object({
+  goals: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(100),
+        objective: z.union([z.literal('all'), z.array(z.string().max(100)).max(200)]),
+      }),
+    )
+    .min(1)
+    .max(20),
+});
+const Sha = z.string().regex(/^[0-9a-f]{40}$/);
+const CodeQuery = z.object({ sha: Sha, path: z.string().min(1).max(1000) });
+const LabelBody = z.object({
+  sha: Sha,
+  path: z.string().min(1).max(1000),
+  lineStart: z.number().int().min(1),
+  lineEnd: z.number().int().min(1),
+  label: z.enum(['agent', 'me']),
 });
 const Id = z.uuid();
 const Limit = z.coerce.number().int().min(1).max(50).default(DEFAULT_WEEKLY_LIMIT);
@@ -255,6 +292,81 @@ export function createApp({ db, userId, login }: AppOptions): Hono {
   });
 
   app.get('/api/calibration', async (c) => c.json<CalibrationResponse>(await calibration(db, userId)));
+
+  // --- 0007: goals, coverage, code view --------------------------------------
+
+  const scopeFor = async (repoId: string) => {
+    const { clone, repo } = await cloneOr404(repoId);
+    return { clone, repo, scope: { db, userId, repo, repoId: clone.id } };
+  };
+
+  app.get('/api/skills', (c) =>
+    c.json<SkillsResponse>({
+      skills: BUILTIN_SKILLS.map((s) => ({
+        slug: s.slug,
+        name: s.name,
+        outcomes: s.outcomes.map((o) => ({ slug: o.slug, name: o.name, description: o.description })),
+      })),
+    }),
+  );
+
+  app.get('/api/github-ready', async (c) => c.json<GithubReadyResponse>({ ready: await githubCliReady() }));
+
+  // Creating a folder runs git on a path the builder typed; creating a GitHub
+  // repo changes their account. The second only happens when the request names
+  // a visibility, which the page sends only after an explicit confirmation.
+  app.post('/api/projects', async (c) => {
+    const { path, github } = await body(c, ProjectBody);
+    const repo = await createProjectFolder(path);
+    if (github !== undefined) await createGithubRepo(repo, github);
+    const clone = await registerLocalClone(db, repo);
+    return c.json<RepoView>({ id: clone.id, name: clone.name, path: clone.path }, 201);
+  });
+
+  app.post('/api/repos/:id/goals', async (c) => {
+    const { scope } = await scopeFor(id(c));
+    const { goals } = await body(c, GoalsBody);
+    const result = await setGoals(scope, goals);
+    return c.json<SetGoalsResponse>(result, 201);
+  });
+
+  app.post('/api/repos/:id/scan', async (c) => {
+    const { scope } = await scopeFor(id(c));
+    return c.json<ScanResponse>(await scanNewCommits(scope));
+  });
+
+  app.get('/api/repos/:id/coverage', async (c) => {
+    const { repo, clone } = await scopeFor(id(c));
+    const [goals, positions] = await Promise.all([loadCoverage(db, userId, clone.id), commitPositions(repo)]);
+    const mentioned = new Set(goals.flatMap((g) => g.outcomes.flatMap((o) => o.sightings.map((s) => s.sha))));
+    return c.json<CoverageResponse>({
+      positions: Object.fromEntries([...mentioned].map((sha) => [sha, positions.indexOf.get(sha) ?? 0])),
+      commitCount: positions.total,
+      goals: goals.map((g) => ({ ...g, declaredAt: g.declaredAt.toISOString() })),
+    });
+  });
+
+  app.get('/api/repos/:id/code', async (c) => {
+    const { repo, scope } = await scopeFor(id(c));
+    const query = CodeQuery.safeParse({ sha: c.req.query('sha'), path: c.req.query('path') });
+    if (!query.success) throw new BadRequest(z.prettifyError(query.error));
+    const view = await codeView(scope, query.data.sha, query.data.path);
+    if (view === null) throw new NotFound('That file is not in that commit.');
+    const positions = await commitPositions(repo);
+    return c.json<CodeViewResponse>({
+      sha: query.data.sha,
+      path: query.data.path,
+      position: positions.indexOf.get(query.data.sha) ?? null,
+      ...view,
+    });
+  });
+
+  app.post('/api/repos/:id/labels', async (c) => {
+    const { scope } = await scopeFor(id(c));
+    const label = await body(c, LabelBody);
+    if (label.lineEnd < label.lineStart) throw new BadRequest('lineEnd must not be before lineStart.');
+    return c.json<LabelResponse>({ updated: await relabelLines(scope, label) });
+  });
 
   app.notFound((c) => c.json({ error: 'Not found.' }, 404));
   app.onError((error, c) => {

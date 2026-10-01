@@ -83,7 +83,7 @@ export async function goalOutcomes(db: Db, userId: string, repoId: string): Prom
   return { defs, idBySlug: new Map(rows.map((r) => [r.slug, r.id])) };
 }
 
-async function labelsFor(db: Db, repoId: string): Promise<LineLabel[]> {
+export async function labelsFor(db: Db, repoId: string): Promise<LineLabel[]> {
   const rows = await db
     .select()
     .from(lineLabels)
