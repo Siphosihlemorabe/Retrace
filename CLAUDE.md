@@ -221,6 +221,58 @@ code when the question was about an approach.
 Be frank about weaknesses in the idea. He'd rather hear where something breaks than
 get agreement — that's the same standard the product holds its users to.
 
+## Feature docs — written before the code
+
+Every feature gets a numbered spec in `docs/features/NNNN-short-name.md` **before any
+implementation starts**. The builder edits it, and that edited version is the brief.
+Kept after the feature ships, updated with what actually happened.
+
+Each doc follows the shape of `0001`:
+
+- Header: **Status** · **Build order** step · **Writes to the database**
+- **What it is** — with an example of the output or interaction
+- **Why this before anything else** — including **what choosing this costs**
+- **What it is not** — scope guards, each deliberate
+- **How it works**
+- Any decision that must be made before starting, with options and a recommendation
+- **Deliverables** — checkboxes grouped by module path, ordered by dependency, ending
+  with what is *not* a deliverable on purpose
+- **How we will know it worked** — measurable criteria and an honest risk
+- **Open questions** and **What this unblocks**
+
+Tick deliverables in the doc as they land. When the build reveals something, add a
+section recording it (see 0001's "First run") rather than silently rewriting the plan.
+
+## Current feature
+
+**Done: [0001 follow-up](./docs/features/0001-dependency-decision-detector.md#follow-up--found-while-specifying-0002)** — landed.
+Found while specifying 0002, and needed before 0002 could start:
+
+- `oneOf()` emits bind parameters into CHECK constraints, so migration 0000 cannot be
+  applied. Fix it to emit literals, regenerate 0000 (it has never been applied), and
+  restore the `citext` line
+- One kind vocabulary: `origination` → `dependency_choice`; `removal` added to the schema
+- `DETECTOR_VERSION` in `rank.ts`, next to the weights
+- First real migrate; `schema.test.ts` actually runs
+
+**Then: [0002 — Capture flow (CLI)](./docs/features/0002-capture-flow.md)** — agreed.
+Asks about the detector's surfaced candidates and stores decisions, learning goals and
+dismissals. First feature to write to Postgres. Local clones get a `repos.source`
+column (decided). Deliverables, in order:
+
+- Schema: `repos.source` with a conditional-nullable CHECK
+- Local identity: seed the builder's user row, register a local clone as a repo
+- Candidate persistence with upsert on the dedupe key
+- Weekly ask budget
+- Rule-based cost check (`COST_CHECK_VERSION`), no LLM
+- Recording decisions / learning goals / dismissals, with revisions, transactional
+- CLI: `npm run ask`, `--manual`, `--calibration`, `npm run decisions`
+- Tests, skipping without `DATABASE_URL`
+
+The feature doc is the source of truth for the checklist; this is a summary.
+
+Previous: [0001 — Dependency decision detector](./docs/features/0001-dependency-decision-detector.md) — built.
+
 ## Open questions
 
 - The name.
