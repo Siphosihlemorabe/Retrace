@@ -10,9 +10,10 @@ technology choices — those are decided per-component, by the builder.
 
 ## What this is, in one sentence
 
-A tool that turns code a developer has already written into a record of judgement —
-what they chose, what it cost, and whether they can explain it — starting by being
-genuinely useful to exactly one person: its builder.
+A tool that helps a developer learn deliberately while they build — set what you want to
+learn, see what your code actually covers, document and explain it — and turns that into
+a shareable record of judgement and learning: what they chose, what it cost, and whether
+they can explain it. It starts by being genuinely useful to exactly one person: its builder.
 
 ## Who it's for
 
@@ -23,6 +24,16 @@ The developer has an acute, recurring, felt problem: they cannot talk about thei
 work well. They shipped things — often with heavy AI assistance — and can't explain
 why a choice was made, what the alternative was, or what it cost. That hurts in
 interviews, in code review, and in their own learning.
+
+**It is used while building, not only after** (builder's decision, 2026-10-01). When a
+project starts, the developer says what they want to learn from it ("SQL and Docker").
+The product shows whether the project actually makes them practise it, highlights the code
+that does and who wrote it, and has them document and explain it. Across all their
+projects, that becomes a profile they can share, still serving the developer first.
+
+The full description, in the builder's own answers, is
+[`docs/product-direction.md`](./docs/product-direction.md). Where this file and that
+one disagree, ask the builder.
 
 Employers have a real problem too (CVs are unverifiable, AI made "here's working code"
 meaningless). But they don't feel it acutely, they aren't short of applicants, and
@@ -46,29 +57,33 @@ load-bearing signal across the whole product.
 
 ## Build order — read this before proposing scope
 
-1. **Tradeoff capture and explain-back.** The core mechanic. Useful with one user.
-2. **Interview prep built on that data.** The first thing anyone would pay for. Still
-   needs no second user.
-3. **Learning goals and progression over time.** Makes it a learning tool rather than
-   a record.
-4. **Public profile / embed.** Distribution as much as feature.
+1. **Tradeoff capture and explain-back.** The core mechanic. Built: detection,
+   authorship and capture (0001–0003).
+2. **Learning goals while building.** Goals per project, any skill, broken into
+   outcomes. Code touching them is found and highlighted with who wrote it, documented
+   and explained (practice, then a check), and shown as per-goal progress (0007,
+   0009–0011).
+3. **A shareable profile.** Across all projects, published as a snapshot (0012). Brought
+   forward by the builder on 2026-10-01.
+4. **Interview prep built on that data.** The first thing anyone would pay for (0013).
 5. **Verified profiles and job-spec matching.** A bet, not a roadmap item.
 
-**Changed 2026-10-01, at the builder's request: step 3 comes forward.** The product is
-used *while* building, not only after. The builder sets learning goals when a project
-starts ("I want to learn Docker and SQL"). Each goal is broken into concrete outcomes
-(joins, aggregates, multi-stage builds…). Commits are checked as they arrive, and questions
-ask about the specific code that covers, or misses, those outcomes. Steps 1 and 2 still
-stand; goals become the main input to them. See
-[0007](./docs/features/0007-project-goals-and-outcomes.md),
-[0008](./docs/features/0008-github-app.md) and [0009](./docs/features/0009-model-questions.md).
+Automatic tracking on every push (the GitHub App, 0008) supports steps 2–3 and comes
+after them. The app can already scan whenever it is opened.
 
-The rule that keeps this honest: **code being present is not learning.** An outcome only
-counts as progress when the builder wrote it, and only as understood when they can
-explain it. "Your agent wrote a JOIN" is something to ask about, never something to credit.
+The rule that keeps this honest: **code being present is not learning.** Code that
+touches an outcome, whoever wrote it (ORM calls included), is *touched*. An outcome is
+*learned* only when the developer has **documented** it in their own words **and
+explained** it in a check. Agent-written code counts once it is understood, and not
+before. "Your agent wrote a JOIN" is something to ask about, never something to credit.
 
 **The scope rule:** if a feature's value depends on someone other than the builder
 using the product, it is not current scope. Say so rather than building it.
+
+**The one deliberate exception: the shareable profile** (builder's decision,
+2026-10-01). It is built now, as a published snapshot, with no hosting and no second
+user. Its viewers get honesty, not features: verified and claimed shown apart,
+private-repo links shown as claims, and locally recorded times never presented as proof.
 
 The one exception: **the data model should be designed so matching is possible later,
 even though matching isn't being built.** Schemas are expensive to change; features
@@ -205,9 +220,13 @@ code" reads as an insult and nobody will try it. "Understand your codebase bette
 
 ## Non-goals
 
-- Anything requiring a second user or external party to have value
-- **Gamification** — streaks, points, badges. It corrupts the honesty the whole system
-  depends on.
+- Anything requiring a second user or external party to have value (the shareable
+  profile is the one exception; see the scope rule)
+- **Streaks, points, badges.** They corrupt the honesty the whole system depends on: a
+  streak makes you answer just to keep it alive. **Progress percentages are allowed**
+  (builder's decision, 2026-10-01), but only **per goal, per project**, computed only
+  from learned outcomes, out of the skill's full outcome list, and always clickable
+  through to the evidence behind them.
 - **A single score per person.** This will keep tempting you because it's easy to
   display. It invites gaming and gives a viewer nothing to check. Show evidence, not
   scores.
