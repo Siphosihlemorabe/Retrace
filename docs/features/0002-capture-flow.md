@@ -189,11 +189,11 @@ Edit freely — ordering reflects dependency, not priority.
 - [x] Register a local clone as a `repos` row keyed on its absolute path + root commit SHA
 
 **Detector version** — defined in 0001's follow-up
-- [ ] Stored on every candidate row
+- [x] Stored on every candidate row
 
 **Candidate persistence** — `src/core/detect/` (pure mapping) + `src/db/` (writes)
-- [ ] `RankedCandidate → candidates` row mapping, with the promoted deliberateness columns
-- [ ] Upsert on the dedupe key; never re-ask an answered candidate at the same version
+- [x] `RankedCandidate → candidates` row mapping, with the promoted deliberateness columns
+- [x] Upsert on the dedupe key; never re-ask an answered candidate at the same version
 
 **Budget** — `src/core/decisions/budget.ts`
 - [ ] Next N pending candidates for the user, respecting a per-week limit
@@ -221,7 +221,7 @@ Edit freely — ordering reflects dependency, not priority.
 
 **Tests**
 - [ ] Cost check against the fixture list
-- [ ] Candidate mapping round-trip (pure)
+- [x] Candidate mapping round-trip (pure)
 - [ ] Recording against a real database: answer → rows → status, revisions written on
       edit, re-running `ask` does not re-ask
 - [ ] Skips silently without `DATABASE_URL`, like `schema.test.ts`
@@ -262,7 +262,7 @@ enough to tune weights or trust percentages. Treat the numbers as directions.
 3. **Where does "Context" come from?** The builder often won't remember. Showing the
    introducing commit's diff stat and subject may be enough to jog it; showing the diff
    itself may be too much in a terminal.
-4. **Does the builder re-answer after a detector version bump?** The dedupe key includes
+4. ~~**Does the builder re-answer after a detector version bump?**~~ **Decided while building: no.** Answered at any version means never asked again (see Build notes). The dedupe key includes
    the version, so a bump re-surfaces everything. Probably: carry answers forward when
    `(kind, subject, introducing_sha)` matches.
 
@@ -288,5 +288,15 @@ Recorded as the build goes, rather than by rewriting the plan above.
 - **A local clone's root is the first-parent root**, and its path is canonicalised
   (`realpath`). "Any root" changes when unrelated history is merged in. The first-parent
   root never does, and `../x`, `./x/` and a differently-cased Windows path are one repo.
+- **Answered once, never re-asked, at any detector version** (open question 4). A version
+  bump re-detects the same `(kind, subject, introducing SHA)`, and if any earlier row for it
+  is answered, dismissed or expired, no new row is written. Answers are *not* copied
+  forward, because calibration groups dismissals by detector version and a v1 dismissal
+  counted as v2's would be wrong.
+- **Pending candidates that stop surfacing are withdrawn.** For example, one becomes a
+  colleague's once identities are confirmed. Deleted if never shown, `expired` if shown,
+  so nothing is asked that the detector now suppresses. Only surfaced candidates are stored.
+- **Writes live in `src/core/decisions/`**, not `src/db/`. `core/` takes a db argument, so
+  they are testable against the test database. The spec said `src/db/`.
 - **`.env` is loaded by Node itself** (`--env-file-if-exists`, `process.loadEnvFile`),
   not dotenv. One less dependency.

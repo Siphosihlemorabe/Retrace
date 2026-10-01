@@ -233,7 +233,7 @@ Edit freely — ordering reflects dependency, not priority.
 **Schema** — migration 0002 (shared with 0002), `src/db/schema.ts`
 - [x] `candidates.introduced_by` (CHECK over the seven classes),
       `candidates.introducing_author_email`, `candidates.authorship_version`
-- [ ] `candidates.commit_index_at_introduction`, `candidates.commit_count_at_detection`;
+- [x] `candidates.commit_index_at_introduction`, `candidates.commit_count_at_detection`;
       stop writing `project_age_days_at_introduction` (see open question 3)
 - [x] `decisions.role` in (`made`, `directed`, `kept`), NOT NULL, copied at insert and
       never updated
