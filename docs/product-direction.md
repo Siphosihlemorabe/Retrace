@@ -1,12 +1,12 @@
 # Product direction — what the builder wants, in their words
 
-**Status:** for the builder to confirm (2026-10-01). Nothing below has been built.
+**Status:** confirmed by the builder (2026-10-01). Nothing below is built yet; the specs in §6 build it.
 **How this was made:** from the builder's answers in conversation on 2026-10-01. Every
-decision is the builder's, or a recommendation they accepted. Anything still unknown is in
-**§8 Open**, not filled in.
+decision is the builder's, or a recommendation they accepted. §8 records how the last
+open questions were settled.
 
-Once confirmed, this replaces the guesses in specs 0007–0009, and §9's changes go into
-`CLAUDE.md`.
+This replaces the guesses in the first drafts of specs 0007–0009, and §9's changes are
+now in `CLAUDE.md`.
 
 ---
 
@@ -63,9 +63,11 @@ On every push:
    An ORM call (for example Drizzle's `.leftJoin()`) **counts as touching** joins.
 3. **Highlighted code.** In a code view, the lines that relate to your objectives (for
    example the SQL) are **highlighted**, together with who wrote them.
-4. **Documenting.** You can **document what those lines mean**: notes attached to lines
-   in your own words. *(Your sentence ended "…so the developer could document what that line
-   means and…". See §8.)*
+4. **Documenting.** You **document what those lines mean**: notes attached to lines, in
+   your own words. **Then the app checks those lines for tradeoffs and alternatives**: was
+   there a real alternative here, and what did this choice cost? If your note already says,
+   that's done. If not, it asks one follow-up. If there was no real choice, it says so and
+   asks nothing.
 
 ### 3.4 Questions
 
@@ -84,8 +86,11 @@ On every push:
 
 - **Practice:** a model **judges your explanation and gives feedback** to help you
   improve. You can retry as often as you like. It is **private, and never counts**.
-- **Check:** a **fresh question, with no hints**, judged once. **Only checks count**
-  toward learning, percentages and the profile.
+- **Check:** a **fresh question, with no hints**, judged once as **pass** or **not yet**,
+  never a grade. The judge says what was right, missed or wrong, pointing at lines. **Only
+  checks count** toward learning, percentages and the profile. After "not yet" you go back to
+  practice, and the next check is a **fresh question on another day**, never the same one
+  retried.
 
 ### 3.6 What counts as learned (the reward)
 
@@ -97,6 +102,8 @@ On every push:
 
 ### 3.7 Progress percentages
 
+- **Objective:** the outcomes you tick when setting a goal are your objective for that
+  project. It's **met** when every ticked outcome is learned, shown as "4 of 4 met ✓".
 - One **percentage per goal, per project**, for example **"SQL in bookings-api: 36% learned
   (4 of 11)"**, with touched-but-not-yet-learned outcomes shown next to it.
 - Computed from **learned outcomes only**, out of the **full outcome list** for that skill,
@@ -109,8 +116,8 @@ On every push:
 ### 3.8 The profile
 
 - Covers **all your projects**: the stacks you set goals for, each with its percentages
-  (depth within the stack); **real decisions** made; **whether you met your objectives**
-  *(see §8)*; your **documented learning**; and **links to the code**.
+  (depth within the stack); **real decisions** made; **whether you met your objectives** (every
+  outcome you ticked for that project is learned); your **documented learning**; and **links to the code**.
 - Across stacks, a **plain list sorted by most recent**, never a count of technologies as an
   achievement (`CLAUDE.md`'s rule, kept).
 - **How it's shared:** a **published snapshot**. The app stays on your laptop, and "publish"
@@ -147,34 +154,30 @@ The dependency detector (0001), authorship (0003), the question flow with the co
 | 0007 goals and outcomes | Rewrite: any skill; model-drafted lists for non-built-in skills, reviewed by you; per-line authorship with relabelling; highlighted objective code; touched → learned statuses; percentages |
 | 0008 GitHub App | Mostly unchanged |
 | 0009 detailed questions | Update: weekly number you set (min 3); priority (objective → important → rest); questions about your lines, agent lines, decisions |
-| **new: documenting** | Line notes in your own words; publish choice per note |
-| **new: practice and check** | The judge (coaching), and the separate check mode that counts (absorbs 0005's judge) |
-| **new: profile** | Across projects; percentages; public and private split; publish a static snapshot |
-| interview prep | Renumbered after these |
+| **0010 documenting** (new) | Line notes in your own words; publish choice per note |
+| **0011 practice and check** (new) | The judge (coaching), and the separate check mode that counts (absorbs 0005's judge) |
+| **0012 profile** (new) | Across projects; percentages; public and private split; publish a static snapshot |
+| 0013 interview prep | Renumbered after these |
 
-## 7. Proposed build order
+## 7. Build order (agreed)
 
-To agree. My recommendation: **goals and outcomes → detailed questions → documenting →
-practice and check → profile → GitHub App.** Each step is usable on its own. The GitHub App
-comes last because the app can already scan when you open it. *(You chose the GitHub App
-"now" earlier; tell me if it should move up.)*
+**Goals and outcomes → detailed questions → documenting → practice and check → profile →
+GitHub App.** Each step is usable on its own. The GitHub App comes last because the app
+can already scan whenever it's opened. The cost: nothing updates between visits until it
+lands.
 
-## 8. Open — still unknown
+## 8. How the last open questions were settled (2026-10-01)
 
-1. **Your sentence about documenting ended with "and…".** "Highlight part of the code that
-   deals with whatever objective we have, e.g. SQL, so the developer could document what
-   that line means and …" — what comes after "and"?
-2. **Question 5 was blank.** I took it as "go with the recommendation": the model drafts the
-   list for a new skill, you review it, and coverage it finds is labelled "found by the
-   model". Correct?
-3. **"Whether you met your objectives" on the profile.** What does *meeting* an objective
-   mean? 100% of the list? A target you set yourself when declaring the goal (for example
-   "I want joins, aggregates and indexes")? Something else?
-4. **What does passing a check mean?** Does the judge give a simple pass or not-yet, or a
-   graded result? (Either way, only checks count.)
-5. **Build order (§7):** agree, or should the GitHub App or the profile move up?
+1. **Documenting** is your note on the lines, then the app's check for tradeoffs and
+   alternatives, as in §3.3. The builder finished the sentence: "…document what that line
+   means, and we check what tradeoffs, if any, and alternatives."
+2. **New skills:** the model drafts the outcome list, you review and edit it, and coverage it
+   finds is labelled "found by the model".
+3. **Objective met:** every outcome you ticked for that project is learned.
+4. **Passing a check:** pass or not yet, with reasons. A fresh question next time.
+5. **Build order:** as in §7.
 
-## 9. Proposed `CLAUDE.md` changes (draft — not applied)
+## 9. `CLAUDE.md` changes (applied 2026-10-01)
 
 1. **One-sentence description**, adding the while-building half: *"A tool that helps a
    developer learn deliberately while they build — set what you want to learn, see what
