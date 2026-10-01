@@ -5,7 +5,7 @@
  */
 import { and, eq } from 'drizzle-orm';
 
-import { candidates } from '../../db/schema.js';
+import { candidates, decisions } from '../../db/schema.js';
 import type { Db } from '../../db/types.js';
 import { fromCandidateRow, type StoredCandidate } from '../detect/candidate-row.js';
 import { detectDependencyDecisions } from '../detect/dependency.js';
@@ -22,6 +22,7 @@ import {
   dismissCandidate,
   recordDecision,
   recordLearningGoal,
+  reviseDecision,
   type DecisionRole,
   type DecisionShape,
   type DismissalReason,
@@ -108,4 +109,60 @@ export async function answerCandidate(
       return { kind: 'decision', decisionId, verdict };
     }
   }
+}
+
+/**
+ * Revise a decision's shape and re-run the cost check against the same
+ * context it was first judged in: what was chosen over what, and this repo.
+ */
+export async function reviseWithCheck(
+  db: Db,
+  userId: string,
+  decisionId: string,
+  shape: DecisionShape,
+  repoCost: (repoId: string) => Promise<RepoCostContext>,
+): Promise<CostVerdict | null> {
+  const [d] = await db
+    .select({ repoId: decisions.repoId, candidateId: decisions.candidateId })
+    .from(decisions)
+    .where(and(eq(decisions.id, decisionId), eq(decisions.userId, userId)));
+  if (d === undefined) return null;
+
+  const candidate = d.candidateId === null ? null : await loadCandidate(db, userId, d.candidateId);
+  const repo = d.repoId === null ? { packageNames: [], paths: [] } : await repoCost(d.repoId);
+  const cost: CostContext =
+    candidate === null
+      ? { ...repo, choice: shape.choice ?? 'this', alternative: null }
+      : candidateCostContext(candidate, repo);
+
+  const verdict = checkCost(shape.cost, cost);
+  await reviseDecision(db, decisionId, shape, verdict);
+  return verdict;
+}
+
+/** Manual entry (0002 §5): the builder's own words, a claim until anchored. */
+export async function recordManual(
+  db: Db,
+  input: {
+    userId: string;
+    repoId: string;
+    shape: DecisionShape;
+    anchor: { sha?: string; path?: string };
+    repo: RepoCostContext;
+  },
+): Promise<{ decisionId: string; verdict: CostVerdict }> {
+  const verdict = checkCost(input.shape.cost, {
+    ...input.repo,
+    choice: input.shape.choice ?? 'this',
+    alternative: null,
+  });
+  const decisionId = await recordDecision(db, {
+    userId: input.userId,
+    repoId: input.repoId,
+    role: 'made',
+    shape: input.shape,
+    verdict,
+    anchor: input.anchor,
+  });
+  return { decisionId, verdict };
 }

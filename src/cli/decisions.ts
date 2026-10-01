@@ -3,7 +3,7 @@
  * missing. The gaps are the feedback; nothing is refused for being incomplete.
  */
 import { listDecisions, missingParts } from '../core/decisions/list.js';
-import { openSession, SetupError } from './session.js';
+import { openSession, SetupError } from '../session.js';
 
 const ROLE = { made: 'you made it', directed: 'you directed it', kept: "you kept your agent's choice" } as const;
 

@@ -29,7 +29,7 @@ import { recordDecision, reviseDecision, type DecisionRole, type DecisionShape }
 import type { StoredCandidate } from '../core/detect/candidate-row.js';
 import { authorIdentities, GitError, openRepo, type Repo } from '../core/git/index.js';
 import { createPrompter, type Prompter } from './prompt.js';
-import { openSession, SetupError, type Session } from './session.js';
+import { openSession, SetupError, type Session } from '../session.js';
 
 const USAGE = `
 Usage: npm run ask <path-to-repo> [options]

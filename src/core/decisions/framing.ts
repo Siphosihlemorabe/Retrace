@@ -7,6 +7,7 @@
  */
 import type { CommitAuthorship } from '../detect/authorship.js';
 import type { StoredCandidate } from '../detect/candidate-row.js';
+import type { Answer } from './capture.js';
 import type { DecisionRole, DismissalReason } from './record.js';
 
 export function describeAuthorship(by: CommitAuthorship, authorEmail: string): string {
@@ -128,4 +129,28 @@ export function goalTitle(c: StoredCandidate): string {
     return `What changed when ${c.signals.displaced} was replaced by ${name}`;
   }
   return c.kind === 'removal' ? `Why ${name} was removed` : `What ${name} does here, and what it costs`;
+}
+
+/**
+ * Whether an answer is one this question offered. The CLI can only send what
+ * it showed; an API can be sent anything, so it checks — a `made` role on an
+ * agent's change would be exactly the blur G4 forbids.
+ */
+export function isOffered(q: Question, answer: Answer): boolean {
+  return q.options.some(({ action }) => {
+    switch (answer.kind) {
+      case 'skip':
+        return action.kind === 'skip';
+      case 'goal':
+        return action.kind === 'goal';
+      case 'decision':
+        return action.kind === 'decision' && action.role === answer.role;
+      case 'dismiss':
+        return (
+          (action.kind === 'dismiss' && action.reason === answer.reason) ||
+          (action.kind === 'not_a_choice_or_trivia' &&
+            (answer.reason === 'not_a_choice' || answer.reason === 'not_load_bearing'))
+        );
+    }
+  });
 }

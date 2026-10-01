@@ -91,10 +91,10 @@ feedback next to the field is the cheaper way to get that answer.
       which then calls them
 
 **API** — `src/server/`
-- [ ] Hono app with the routes above; request bodies validated with Zod, rejected with 400
-- [ ] Host check and JSON-only POSTs; listens on 127.0.0.1
-- [ ] Serves `web/dist` when built
-- [ ] Response types in one file, imported type-only by the web app
+- [x] Hono app with the routes above; request bodies validated with Zod, rejected with 400
+- [x] Host check and JSON-only POSTs; listens on 127.0.0.1
+- [x] Serves `web/dist` when built
+- [x] Response types in one file, imported type-only by the web app
 
 **Web** — `web/`
 - [ ] Vite + React + TypeScript, its own tsconfig, included in `npm run typecheck`
@@ -129,6 +129,16 @@ keystroke and a thought. If `[s]` dominates here, that is a finding about the qu
 not the buttons.
 
 ---
+
+## Build notes
+
+- **The API only accepts answers the question offered.** This goes beyond the spec. The CLI
+  can only send what it showed, but an API can be sent anything, and a `made` role on an
+  agent's change is exactly the blur G4 forbids. `isOffered()` in `framing.ts` checks
+  every answer against `questionFor()`, and anything else is a 400.
+- **`openSession` moved to `src/session.ts`**, shared by both entry points, so the server
+  does not import from `cli/`.
+- **A double answer is a 409**, not a second record, as in the CLI.
 
 ## Open questions
 

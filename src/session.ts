@@ -1,12 +1,12 @@
 /**
- * What every database-backed command needs: a connection, and the builder.
+ * What every database-backed entry point (CLI, local server) needs: a connection, and the builder.
  *
  * The builder is seeded from their real GitHub identity in .env
  * (RETRACE_GITHUB_USER_ID, RETRACE_GITHUB_LOGIN), so sign-in later finds this
  * row rather than creating a second one (0002).
  */
-import { ensureBuilder } from '../core/decisions/local.js';
-import type { Db } from '../db/types.js';
+import { ensureBuilder } from './core/decisions/local.js';
+import type { Db } from './db/types.js';
 
 export interface Session {
   db: Db;
@@ -31,7 +31,7 @@ export async function openSession(): Promise<Session> {
   }
 
   // Imported here, not at the top: client.ts connects on import.
-  const { db, pool } = await import('../db/client.js');
+  const { db, pool } = await import('./db/client.js');
   const userId = await ensureBuilder(db, { githubUserId, login });
   return { db, userId, end: () => pool.end() };
 }

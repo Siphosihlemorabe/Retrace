@@ -13,7 +13,7 @@ import { eq } from 'drizzle-orm';
 
 import { recordIdentity } from '../core/decisions/identity.js';
 import { knownOtherIdentities, userGitIdentities } from '../db/schema.js';
-import { openSession, SetupError } from './session.js';
+import { openSession, SetupError } from '../session.js';
 
 async function main(argv: string[]): Promise<number> {
   const { values } = parseArgs({
