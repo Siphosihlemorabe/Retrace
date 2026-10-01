@@ -56,6 +56,9 @@ describe.skipIf(!connectionString)('schema guarantees', () => {
     // that path by design. Order matters: repo first, then user.
     await db.query(`DELETE FROM repos WHERE id = $1`, [repoId]);
     await db.query(`DELETE FROM users WHERE id = $1`, [userId]);
+    // Skills are shared, not user-owned, so the cascade above misses this one
+    // and a second run would fail on the unique slug.
+    await db.query(`DELETE FROM skills WHERE slug = 'fixture-skill'`);
     await db.end();
   });
 
@@ -82,11 +85,13 @@ describe.skipIf(!connectionString)('schema guarantees', () => {
 
   test('evidence attaches to exactly one thing', async () => {
     const claim = await q(
-      `INSERT INTO skill_claims (user_id, skill_id, level_ordinal)
-       SELECT $1, s.id, 1 FROM (
+      // A data-modifying statement is only allowed in a WITH, not a subquery.
+      `WITH s AS (
          INSERT INTO skills (slug, name, kind) VALUES ('fixture-skill', 'Fixture', 'technology')
          RETURNING id
-       ) s RETURNING id`,
+       )
+       INSERT INTO skill_claims (user_id, skill_id, level_ordinal)
+       SELECT $1, s.id, 1 FROM s RETURNING id`,
       [userId],
     );
     const claimId = claim.rows[0].id;

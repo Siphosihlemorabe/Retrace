@@ -31,11 +31,18 @@ const id = () => uuid('id').primaryKey().defaultRandom();
 const createdAt = () =>
   timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
 
-/** Values allowed in a `text` + CHECK column. */
+/**
+ * Values allowed in a `text` + CHECK column.
+ *
+ * Emitted as SQL literals, not `sql\`${v}\``: interpolation becomes a bind
+ * parameter, which is right in a query and invalid in DDL — it generated
+ * `IN ($1, $2)` constraints that Postgres refuses to create. The values are
+ * compile-time constants, but quotes are escaped anyway so this stays safe if
+ * that ever stops being true.
+ */
 const oneOf = (column: unknown, values: readonly string[]) =>
-  sql`${column} IN (${sql.join(
-    values.map((v) => sql`${v}`),
-    sql`, `,
+  sql`${column} IN (${sql.raw(
+    values.map((v) => `'${v.replaceAll("'", "''")}'`).join(', '),
   )})`;
 
 // ---------------------------------------------------------------------------
@@ -292,6 +299,10 @@ export const candidates = pgTable(
       'candidates_kind',
       oneOf(t.kind, [
         'replacement',
+        // A dependency dropped with nothing in its place. Its own kind rather
+        // than a dependency_choice: it asks "why did you drop X?", carries its
+        // own rank bonus, and calibration has to count it separately.
+        'removal',
         'revert',
         'scaffold_divergence',
         'dependency_choice',

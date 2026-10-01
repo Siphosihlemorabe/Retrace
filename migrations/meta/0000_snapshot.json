@@ -1,5 +1,5 @@
 {
-  "id": "c26e9e1d-b837-4c1d-81c9-602c5ed61254",
+  "id": "5f61741a-2213-4cee-b4d2-5e7143a0feb8",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -416,15 +416,15 @@
       "checkConstraints": {
         "candidates_kind": {
           "name": "candidates_kind",
-          "value": "\"candidates\".\"kind\" IN ($1, $2, $3, $4, $5)"
+          "value": "\"candidates\".\"kind\" IN ('replacement', 'removal', 'revert', 'scaffold_divergence', 'dependency_choice', 'structural_pattern')"
         },
         "candidates_status": {
           "name": "candidates_status",
-          "value": "\"candidates\".\"status\" IN ($1, $2, $3, $4, $5, $6, $7)"
+          "value": "\"candidates\".\"status\" IN ('pending', 'queued', 'asked', 'answered_decision', 'answered_gap', 'dismissed', 'expired')"
         },
         "candidates_dismissed_reason": {
           "name": "candidates_dismissed_reason",
-          "value": "\"candidates\".\"dismissed_reason\" IS NULL OR \"candidates\".\"dismissed_reason\" IN ($1, $2, $3, $4)"
+          "value": "\"candidates\".\"dismissed_reason\" IS NULL OR \"candidates\".\"dismissed_reason\" IN ('not_my_choice', 'not_a_choice', 'not_load_bearing', 'other')"
         }
       },
       "isRLSEnabled": false
@@ -516,7 +516,7 @@
       "checkConstraints": {
         "commit_sightings_source": {
           "name": "commit_sightings_source",
-          "value": "\"commit_sightings\".\"source\" IN ($1, $2, $3)"
+          "value": "\"commit_sightings\".\"source\" IN ('webhook', 'backfill', 'manual_import')"
         }
       },
       "isRLSEnabled": false
@@ -821,7 +821,7 @@
       "checkConstraints": {
         "decision_skills_source": {
           "name": "decision_skills_source",
-          "value": "\"decision_skills\".\"source\" IN ($1, $2, $3)"
+          "value": "\"decision_skills\".\"source\" IN ('llm', 'user', 'rule')"
         }
       },
       "isRLSEnabled": false
@@ -1051,11 +1051,11 @@
       "checkConstraints": {
         "decisions_origin": {
           "name": "decisions_origin",
-          "value": "\"decisions\".\"origin\" IN ($1, $2, $3)"
+          "value": "\"decisions\".\"origin\" IN ('authored_in_repo', 'prompted_by_detection', 'entered_manually')"
         },
         "decisions_provenance": {
           "name": "decisions_provenance",
-          "value": "\"decisions\".\"provenance\" IN ($1, $2)"
+          "value": "\"decisions\".\"provenance\" IN ('pre_registered', 'retrospective')"
         }
       },
       "isRLSEnabled": false
@@ -1279,15 +1279,15 @@
         },
         "evidence_kind": {
           "name": "evidence_kind",
-          "value": "\"evidence\".\"kind\" IN ($1, $2, $3, $4, $5, $6, $7)"
+          "value": "\"evidence\".\"kind\" IN ('introducing_commit', 'replacement', 'revert', 'config', 'test', 'benchmark', 'debug_session')"
         },
         "evidence_verification_status": {
           "name": "evidence_verification_status",
-          "value": "\"evidence\".\"verification_status\" IN ($1, $2, $3, $4)"
+          "value": "\"evidence\".\"verification_status\" IN ('verified', 'stale', 'broken', 'unverifiable')"
         },
         "evidence_broken_reason": {
           "name": "evidence_broken_reason",
-          "value": "\"evidence\".\"broken_reason\" IS NULL OR \"evidence\".\"broken_reason\" IN ($1, $2, $3, $4)"
+          "value": "\"evidence\".\"broken_reason\" IS NULL OR \"evidence\".\"broken_reason\" IN ('repo_deleted', 'history_rewritten', 'path_gone', 'sha_missing')"
         }
       },
       "isRLSEnabled": false
@@ -1485,7 +1485,7 @@
       "checkConstraints": {
         "jobs_status": {
           "name": "jobs_status",
-          "value": "\"jobs\".\"status\" IN ($1, $2, $3, $4, $5)"
+          "value": "\"jobs\".\"status\" IN ('queued', 'running', 'succeeded', 'failed', 'dead')"
         }
       },
       "isRLSEnabled": false
@@ -1600,7 +1600,7 @@
       "checkConstraints": {
         "learning_goals_status": {
           "name": "learning_goals_status",
-          "value": "\"learning_goals\".\"status\" IN ($1, $2, $3, $4)"
+          "value": "\"learning_goals\".\"status\" IN ('open', 'in_progress', 'done', 'abandoned')"
         }
       },
       "isRLSEnabled": false
@@ -1709,7 +1709,7 @@
       "checkConstraints": {
         "repos_backfill_status": {
           "name": "repos_backfill_status",
-          "value": "\"repos\".\"backfill_status\" IN ($1, $2, $3, $4)"
+          "value": "\"repos\".\"backfill_status\" IN ('pending', 'running', 'complete', 'failed')"
         }
       },
       "isRLSEnabled": false
@@ -1875,7 +1875,7 @@
       "checkConstraints": {
         "skill_claims_status": {
           "name": "skill_claims_status",
-          "value": "\"skill_claims\".\"status\" IN ($1, $2)"
+          "value": "\"skill_claims\".\"status\" IN ('verified', 'claimed')"
         }
       },
       "isRLSEnabled": false
@@ -1984,7 +1984,7 @@
       "checkConstraints": {
         "skills_kind": {
           "name": "skills_kind",
-          "value": "\"skills\".\"kind\" IN ($1, $2, $3, $4)"
+          "value": "\"skills\".\"kind\" IN ('technology', 'language', 'concept', 'practice')"
         }
       },
       "isRLSEnabled": false
@@ -2056,7 +2056,7 @@
       "checkConstraints": {
         "user_git_identities_confirmed_via": {
           "name": "user_git_identities_confirmed_via",
-          "value": "\"user_git_identities\".\"confirmed_via\" IN ($1, $2)"
+          "value": "\"user_git_identities\".\"confirmed_via\" IN ('github_verified', 'user_asserted')"
         }
       },
       "isRLSEnabled": false

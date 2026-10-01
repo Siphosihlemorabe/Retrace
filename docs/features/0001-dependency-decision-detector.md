@@ -248,6 +248,102 @@ not been run.
 
 ---
 
+## Follow-up — found while specifying 0002
+
+0001 wrote nothing, so nothing checked whether its output fits the database. Mapping it
+onto `candidates` for [0002](./0002-capture-flow.md) found three problems. They are
+fixed here, before 0002 starts, so 0002 opens on a detector that fits the schema.
+
+### 1. Migration 0000 cannot be applied — every CHECK constraint is broken
+
+`oneOf()` in `src/db/schema.ts` builds each allowed value as `sql\`${v}\``, which
+Drizzle turns into a bind parameter. Inside a query that is correct. Inside DDL it
+is not: the generated migration contains
+
+```sql
+CONSTRAINT "candidates_kind" CHECK ("candidates"."kind" IN ($1, $2, $3, $4, $5))
+```
+
+Sixteen constraints look like this, and Postgres rejects DDL containing parameters. The
+first `npm run db:migrate` would have failed.
+
+It went unnoticed because `schema.test.ts` skips silently without `DATABASE_URL` and has
+never had one. **So "skips silently" hid a total failure, not just an untested case.**
+That is the cost of the convenience, and it argues for 0002's database tests failing
+loudly in CI once there is CI.
+
+**Fix:** have `oneOf` emit escaped literals (`sql.raw`, with single quotes doubled), then
+regenerate 0000. Regenerating is safe **only because 0000 has never been applied
+anywhere.** After the first real migrate, this becomes a new migration instead.
+Regenerating also drops the hand-added `CREATE EXTENSION citext` at the top of 0000,
+so put it back.
+
+### 2. Detector kinds do not match `candidates_kind`
+
+The detector emits `replacement | origination | removal`. The schema allows
+`replacement | revert | scaffold_divergence | dependency_choice | structural_pattern`.
+
+**Decided: one vocabulary, with no mapping layer.**
+
+- `origination` → renamed to **`dependency_choice`** in the detector. The schema is the
+  thing that outlives features, so the code adopts its names.
+- `removal` → **added to `candidates_kind`**. It is not folded into `dependency_choice`
+  because it asks a different question ("why did you drop X?", not "why X?") and it has
+  its own rank bonus. Folding it in would also mix the two in the calibration
+  output, which is the point of 0002.
+
+**What this costs:** a rename across the detector, the ranking, the CLI and the tests,
+plus the "origination" wording in this doc's earlier sections, which stays as written
+since it describes what was built then. A mapping function would have been smaller
+today. It would also be one more place for the two vocabularies to drift apart, with no
+error when they do.
+
+### 3. No detector version
+
+`candidates.detector_version` is NOT NULL and part of the dedupe key. Nothing in the
+detector defines one.
+
+**Decided:** `export const DETECTOR_VERSION = 1` in `rank.ts`, next to `WEIGHTS` and
+`THRESHOLD`. Bump it whenever the three tests, the weights or the threshold change what
+a candidate means. Putting it next to the weights means a tuning change and its version
+bump show up in the same diff.
+
+### Deliverables
+
+- [x] `oneOf` emits escaped literals instead of bind parameters
+- [x] Regenerate `0000` and restore the `citext` extension line; the snapshot has no `$n`
+- [x] Apply 0000 + 0001 to a local Postgres; `schema.test.ts` actually runs and passes
+- [x] Add `removal` to `candidates_kind` in the schema
+- [x] Rename `origination` → `dependency_choice` in `dependency.ts`, `rank.ts`
+      (`KIND_BONUS`), `cli/index.ts`, and `dependency.test.ts`
+- [x] `DETECTOR_VERSION` in `rank.ts`; include it in `--json` output
+- [x] `npm test` and `npm run typecheck` pass; a detector run on one of the four repos
+      gives the same ranking as before (only the kind label should change)
+
+### What the fix run found
+
+- **The regenerated 0000 differs from the old one only in its CHECK lines.** All 16 now
+  hold literals, and `candidates_kind` includes `removal`. Tables, indexes and foreign
+  keys are unchanged.
+- **The ranking is unchanged.** `frontend-fixer` (4 of 89 surfaced) and
+  `confetti-confectionery` (1 of 14) give identical `--json` output before and after,
+  apart from the kind label. That confirms the rename changed names, not behaviour.
+- **`schema.test.ts` had never run, and it had two bugs of its own.** It put an `INSERT`
+  inside a `FROM` subquery, which Postgres only allows in a `WITH`. It also left a
+  shared `skills` row behind, so a second run would have failed on the unique slug. Both
+  are fixed. 40/40 pass, and still pass on a second run against the same database.
+- Verified against a throwaway Postgres 16 cluster, not the builder's own database.
+  `.env` has not been created yet. Running `npm run db:migrate` against the real local
+  database is still to do, and needs its credentials.
+
+**Still unguarded:** nothing stops the detector's `CandidateKind` and the schema's
+`candidates_kind` drifting apart again. `kind` is a `text` column, so TypeScript will not
+catch a mismatch. 0002's first insert will, at runtime. If that turns out to be too
+late, a test can compare `Object.keys(KIND_BONUS)` against the constraint read from
+`pg_constraint`.
+
+---
+
 ## Open questions
 
 1. ~~**How is "has known alternatives" decided?**~~ **Answered by the first run.** The

@@ -53,9 +53,9 @@ CREATE TABLE "candidates" (
 	"asked_at" timestamp with time zone,
 	"answered_at" timestamp with time zone,
 	CONSTRAINT "candidates_dedupe_unq" UNIQUE("repo_id","kind","subject_key","introducing_sha","detector_version"),
-	CONSTRAINT "candidates_kind" CHECK ("candidates"."kind" IN ($1, $2, $3, $4, $5)),
-	CONSTRAINT "candidates_status" CHECK ("candidates"."status" IN ($1, $2, $3, $4, $5, $6, $7)),
-	CONSTRAINT "candidates_dismissed_reason" CHECK ("candidates"."dismissed_reason" IS NULL OR "candidates"."dismissed_reason" IN ($1, $2, $3, $4))
+	CONSTRAINT "candidates_kind" CHECK ("candidates"."kind" IN ('replacement', 'removal', 'revert', 'scaffold_divergence', 'dependency_choice', 'structural_pattern')),
+	CONSTRAINT "candidates_status" CHECK ("candidates"."status" IN ('pending', 'queued', 'asked', 'answered_decision', 'answered_gap', 'dismissed', 'expired')),
+	CONSTRAINT "candidates_dismissed_reason" CHECK ("candidates"."dismissed_reason" IS NULL OR "candidates"."dismissed_reason" IN ('not_my_choice', 'not_a_choice', 'not_load_bearing', 'other'))
 );
 --> statement-breakpoint
 CREATE TABLE "commit_sightings" (
@@ -66,7 +66,7 @@ CREATE TABLE "commit_sightings" (
 	"source" text NOT NULL,
 	"webhook_delivery_id" uuid,
 	CONSTRAINT "commit_sightings_repo_sha_unq" UNIQUE("repo_id","sha"),
-	CONSTRAINT "commit_sightings_source" CHECK ("commit_sightings"."source" IN ($1, $2, $3))
+	CONSTRAINT "commit_sightings_source" CHECK ("commit_sightings"."source" IN ('webhook', 'backfill', 'manual_import'))
 );
 --> statement-breakpoint
 CREATE TABLE "commits" (
@@ -104,7 +104,7 @@ CREATE TABLE "decision_skills" (
 	"source" text NOT NULL,
 	"confidence" numeric(4, 3),
 	CONSTRAINT "decision_skills_decision_id_skill_id_pk" PRIMARY KEY("decision_id","skill_id"),
-	CONSTRAINT "decision_skills_source" CHECK ("decision_skills"."source" IN ($1, $2, $3))
+	CONSTRAINT "decision_skills_source" CHECK ("decision_skills"."source" IN ('llm', 'user', 'rule'))
 );
 --> statement-breakpoint
 CREATE TABLE "decisions" (
@@ -132,8 +132,8 @@ CREATE TABLE "decisions" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "decisions_candidate_id_unique" UNIQUE("candidate_id"),
-	CONSTRAINT "decisions_origin" CHECK ("decisions"."origin" IN ($1, $2, $3)),
-	CONSTRAINT "decisions_provenance" CHECK ("decisions"."provenance" IN ($1, $2))
+	CONSTRAINT "decisions_origin" CHECK ("decisions"."origin" IN ('authored_in_repo', 'prompted_by_detection', 'entered_manually')),
+	CONSTRAINT "decisions_provenance" CHECK ("decisions"."provenance" IN ('pre_registered', 'retrospective'))
 );
 --> statement-breakpoint
 CREATE TABLE "evidence" (
@@ -159,9 +159,9 @@ CREATE TABLE "evidence" (
         + ("evidence"."learning_goal_id" IS NOT NULL)::int
         + ("evidence"."skill_claim_id" IS NOT NULL)::int
       ) = 1),
-	CONSTRAINT "evidence_kind" CHECK ("evidence"."kind" IN ($1, $2, $3, $4, $5, $6, $7)),
-	CONSTRAINT "evidence_verification_status" CHECK ("evidence"."verification_status" IN ($1, $2, $3, $4)),
-	CONSTRAINT "evidence_broken_reason" CHECK ("evidence"."broken_reason" IS NULL OR "evidence"."broken_reason" IN ($1, $2, $3, $4))
+	CONSTRAINT "evidence_kind" CHECK ("evidence"."kind" IN ('introducing_commit', 'replacement', 'revert', 'config', 'test', 'benchmark', 'debug_session')),
+	CONSTRAINT "evidence_verification_status" CHECK ("evidence"."verification_status" IN ('verified', 'stale', 'broken', 'unverifiable')),
+	CONSTRAINT "evidence_broken_reason" CHECK ("evidence"."broken_reason" IS NULL OR "evidence"."broken_reason" IN ('repo_deleted', 'history_rewritten', 'path_gone', 'sha_missing'))
 );
 --> statement-breakpoint
 CREATE TABLE "installations" (
@@ -189,7 +189,7 @@ CREATE TABLE "jobs" (
 	"last_error" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"completed_at" timestamp with time zone,
-	CONSTRAINT "jobs_status" CHECK ("jobs"."status" IN ($1, $2, $3, $4, $5))
+	CONSTRAINT "jobs_status" CHECK ("jobs"."status" IN ('queued', 'running', 'succeeded', 'failed', 'dead'))
 );
 --> statement-breakpoint
 CREATE TABLE "learning_goals" (
@@ -202,7 +202,7 @@ CREATE TABLE "learning_goals" (
 	"status" text DEFAULT 'open' NOT NULL,
 	"opened_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"closed_at" timestamp with time zone,
-	CONSTRAINT "learning_goals_status" CHECK ("learning_goals"."status" IN ($1, $2, $3, $4))
+	CONSTRAINT "learning_goals_status" CHECK ("learning_goals"."status" IN ('open', 'in_progress', 'done', 'abandoned'))
 );
 --> statement-breakpoint
 CREATE TABLE "repos" (
@@ -218,7 +218,7 @@ CREATE TABLE "repos" (
 	"backfill_status" text DEFAULT 'pending' NOT NULL,
 	"last_push_seen_at" timestamp with time zone,
 	CONSTRAINT "repos_github_repo_id_unique" UNIQUE("github_repo_id"),
-	CONSTRAINT "repos_backfill_status" CHECK ("repos"."backfill_status" IN ($1, $2, $3, $4))
+	CONSTRAINT "repos_backfill_status" CHECK ("repos"."backfill_status" IN ('pending', 'running', 'complete', 'failed'))
 );
 --> statement-breakpoint
 CREATE TABLE "skill_aliases" (
@@ -237,7 +237,7 @@ CREATE TABLE "skill_claims" (
 	"first_evidenced_at" timestamp with time zone,
 	"last_evidenced_at" timestamp with time zone,
 	CONSTRAINT "skill_claims_unq" UNIQUE("user_id","skill_id","level_ordinal"),
-	CONSTRAINT "skill_claims_status" CHECK ("skill_claims"."status" IN ($1, $2))
+	CONSTRAINT "skill_claims_status" CHECK ("skill_claims"."status" IN ('verified', 'claimed'))
 );
 --> statement-breakpoint
 CREATE TABLE "skill_levels" (
@@ -256,7 +256,7 @@ CREATE TABLE "skills" (
 	"kind" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "skills_slug_unique" UNIQUE("slug"),
-	CONSTRAINT "skills_kind" CHECK ("skills"."kind" IN ($1, $2, $3, $4))
+	CONSTRAINT "skills_kind" CHECK ("skills"."kind" IN ('technology', 'language', 'concept', 'practice'))
 );
 --> statement-breakpoint
 CREATE TABLE "user_git_identities" (
@@ -266,7 +266,7 @@ CREATE TABLE "user_git_identities" (
 	"confirmed_via" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "user_git_identities_email_unq" UNIQUE("email"),
-	CONSTRAINT "user_git_identities_confirmed_via" CHECK ("user_git_identities"."confirmed_via" IN ($1, $2))
+	CONSTRAINT "user_git_identities_confirmed_via" CHECK ("user_git_identities"."confirmed_via" IN ('github_verified', 'user_asserted'))
 );
 --> statement-breakpoint
 CREATE TABLE "users" (

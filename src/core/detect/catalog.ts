@@ -3,7 +3,7 @@
  *
  * This is the first of the three tests: "there was a real alternative".
  * A replacement proves it by itself — the displaced package *is* the
- * alternative. An origination has to be looked up here.
+ * alternative. A dependency_choice has to be looked up here.
  *
  * Hand-written on purpose. It is honest about what it does and does not cover,
  * costs nothing to run, and does not need a model in the loop. It also does not

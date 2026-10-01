@@ -3,7 +3,7 @@
  * candidate decisions.
  *
  * A single pass yields both signals worth having: an add with no prior trace is
- * an origination, and an add paired with a remove is a replacement — the
+ * a dependency_choice, and an add paired with a remove is a replacement — the
  * strongest signal there is, because reversal only happens when the first
  * option actually hurt.
  */
@@ -21,7 +21,8 @@ import {
 import { alternativesTo, categoryOf, isNonDecision } from './catalog.js';
 import { diffManifests, parseManifest, type Dep, type Manifest } from './manifest.js';
 
-export type CandidateKind = 'replacement' | 'origination' | 'removal';
+/** Named to match `candidates_kind` in the schema — one vocabulary, no mapping. */
+export type CandidateKind = 'replacement' | 'dependency_choice' | 'removal';
 
 export interface TestResult {
   pass: boolean;
@@ -167,7 +168,7 @@ export async function detectDependencyDecisions(
     const displaced = pairs.get(add);
     candidates.push(
       await buildCandidate({
-        kind: displaced === undefined ? 'origination' : 'replacement',
+        kind: displaced === undefined ? 'dependency_choice' : 'replacement',
         dep: add.dep,
         displaced: displaced?.dep.name ?? null,
         commit: add.commit,

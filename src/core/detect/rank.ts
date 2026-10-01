@@ -18,10 +18,17 @@ export const WEIGHTS = {
 export const KIND_BONUS: Record<CandidateKind, number> = {
   replacement: 0.15,
   removal: 0.05,
-  origination: 0,
+  dependency_choice: 0,
 };
 
 export const THRESHOLD = 0.5;
+
+/**
+ * Stored on every candidate row and part of its dedupe key. Bump it whenever
+ * the three tests, the weights, or the threshold change what a candidate
+ * means — it lives here so a tuning change and its bump land in one diff.
+ */
+export const DETECTOR_VERSION = 1;
 
 /** Imports beyond this add no further evidence of being load-bearing. */
 const IMPORT_SATURATION = 5;

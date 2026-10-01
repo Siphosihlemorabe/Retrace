@@ -154,7 +154,7 @@ describe('the three tests', () => {
 
   test('a deliberate, load-bearing addition surfaces without a replacement', () => {
     const candidate = find('zod')[0];
-    expect(candidate?.kind).toBe('origination');
+    expect(candidate?.kind).toBe('dependency_choice');
     expect(candidate?.suppressed).toBeNull();
     expect(candidate?.tests.alternative.why).toMatch(/schema validation/);
   });
@@ -163,7 +163,7 @@ describe('the three tests', () => {
 describe('a replacement cannot arrive by accident', () => {
   // Found against a real repo: a router swap and a babel→swc swap were both
   // discarded for landing in a busy commit. Size is evidence about
-  // originations, not about swaps.
+  // dependency choices, not about swaps.
   test('a swap inside a sixty-file commit still surfaces', () => {
     const swap = find('winston')[0];
     expect(swap?.kind).toBe('replacement');
@@ -173,11 +173,11 @@ describe('a replacement cannot arrive by accident', () => {
     expect(swap?.tests.deliberate.why).toMatch(/swap among 6\d changed files/);
   });
 
-  test('an origination in that same commit is still suppressed', () => {
+  test('a dependency choice in that same commit is still suppressed', () => {
     // The veto is not disabled wholesale — it still applies to anything that
     // could have ridden along.
     const rodeAlong = result.ranked.filter(
-      (c) => c.kind === 'origination' && c.filesInCommit > 50,
+      (c) => c.kind === 'dependency_choice' && c.filesInCommit > 50,
     );
     expect(rodeAlong.every((c) => c.suppressed === 'not deliberate')).toBe(true);
   });

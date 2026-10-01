@@ -7,7 +7,12 @@
 import { parseArgs } from 'node:util';
 
 import { detectDependencyDecisions } from '../core/detect/dependency.js';
-import { rank, type RankedCandidate, type RankResult } from '../core/detect/rank.js';
+import {
+  DETECTOR_VERSION,
+  rank,
+  type RankedCandidate,
+  type RankResult,
+} from '../core/detect/rank.js';
 import { GitError, openRepo } from '../core/git/index.js';
 
 const USAGE = `
@@ -51,7 +56,8 @@ async function main(argv: string[]): Promise<number> {
   const ranked = rank(result.candidates);
 
   if (values.json === true) {
-    console.log(JSON.stringify({ ...ranked, meta: result }, null, 2));
+    const meta = { ...result, detectorVersion: DETECTOR_VERSION };
+    console.log(JSON.stringify({ ...ranked, meta }, null, 2));
     return 0;
   }
 
