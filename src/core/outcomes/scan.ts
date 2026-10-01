@@ -44,7 +44,7 @@ import { isCodeFile, isSqlFile } from './text.js';
 import type { FileAtCommit, OutcomeDef } from './types.js';
 
 /** Paths no outcome should ever be credited from. */
-const IGNORED = /(^|\/)(node_modules|dist|build|\.next|coverage|vendor|\.git)\/|\.min\.[cm]?js$|(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/;
+export const IGNORED = /(^|\/)(node_modules|dist|build|\.next|coverage|vendor|\.git)\/|\.min\.[cm]?js$|(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/;
 const DOCKERISH = /(^|\/)(Dockerfile|Containerfile)([.\-][\w.-]+)?$|\.dockerfile$|(^|\/)(docker-)?compose(\.[\w-]+)?\.ya?ml$|(^|\/)\.dockerignore$/i;
 
 /** Whether any built-in detector could match this path. A cheap filter before reading content. */

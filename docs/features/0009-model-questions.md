@@ -160,8 +160,10 @@ with `source: builder`.
 - [x] Rule-based fallback for every target
 
 **Outcome lists for any skill** — `src/core/outcomes/`
-- [ ] Draft prompt and schema; a review screen; save as the builder's reviewed list
-- [ ] Model scan of added lines for those outcomes, giving sightings with `found_by: model`
+- [x] Draft prompt and schema; save as the builder's reviewed list
+- [ ] A review screen for the draft
+- [x] Model scan for those outcomes, giving sightings with `found_by: model` (reads HEAD, not
+      each commit's added lines; see build notes)
 
 **Schema**
 - [x] `practice_answers` (user, question, answer, answered at). No foreign key to `evidence` or
@@ -220,6 +222,26 @@ for practice, which is why nothing here counts. Counting starts at 0011's check.
 - **The API-key adapter does not enable server-side refusal fallbacks.** A refusal is
   treated as "the model is unavailable" and falls back to a rule-based question, the
   builder's chosen behaviour.
+- **The model scan reads the code at HEAD, not each commit's added lines.** §3 said "added
+  lines per commit". Reading per commit costs one call per file per commit that touched it.
+  Reading HEAD costs one call per changed file, and caching by git blob means a file that
+  hasn't changed is never read again in any commit. What it gives up: a line written and then
+  deleted between two scans is never seen. Whether lines were written after the goal comes
+  from blame and from when this tool first saw each commit (server time, not git dates). A
+  sighting counts as after the goal only if *every* line in it was, so progress is never
+  overstated.
+- **The cheap filter is the list's `lookFor` cues**, matched as case-insensitive substrings.
+  Only matching files are read, and only around the matching lines. Code that touches an
+  outcome without any cue is missed. The builder can add cues while reviewing.
+- **A hit is dropped** if it names an outcome not on the list, or lines the model wasn't
+  shown. The same rule applies to questions: a question about a line the model never saw
+  falls back to the rule-based one.
+- **New outcomes in a saved list join the objective** of every goal already set for that
+  skill, as "all" does when a goal is set. The builder can untick them. *Assumption, not
+  asked: confirm or change.*
+- **The weekly budget is shared with 0002's dependency questions**, and spent when a
+  question is shown, not when it is written. A dependency question is counted only through
+  `candidates.asked_at`, so the CLI and the web can't count it twice.
 
 ## Open questions
 

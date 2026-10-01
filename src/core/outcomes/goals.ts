@@ -91,7 +91,7 @@ export async function setGoals(scope: ScanScope, requests: readonly GoalRequest[
 
 /** Tick or untick one outcome. Every change is kept (0007 §2). */
 export async function setObjective(
-  scope: ScanScope,
+  scope: Pick<ScanScope, 'db'>,
   goalId: string,
   outcomeId: string,
   inObjective: boolean,

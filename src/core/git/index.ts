@@ -382,3 +382,9 @@ export async function grepLines(repo: Repo, pattern: string, limit: number): Pro
   }
   return places;
 }
+
+/** The blob a path points at in a commit: the same content has the same id in every commit. */
+export async function blobSha(repo: Repo, sha: string, path: string): Promise<string | null> {
+  const out = (await gitAllowFail(repo, ['rev-parse', `${sha}:${path}`])).trim();
+  return /^[0-9a-f]{40}$/.test(out) ? out : null;
+}

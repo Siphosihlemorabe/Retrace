@@ -164,6 +164,7 @@ export async function loadCoverage(db: Db, userId: string, repoId: string): Prom
       foundBy: outcomeSightings.foundBy,
       authorship: outcomeSightings.authorship,
       scanKind: outcomeSightings.scanKind,
+      writtenAfterGoal: outcomeSightings.writtenAfterGoal,
     })
     .from(outcomeSightings)
     .where(eq(outcomeSightings.repoId, repoId));
@@ -182,7 +183,8 @@ export async function loadCoverage(db: Db, userId: string, repoId: string): Prom
       via: s.via,
       foundBy: s.foundBy,
       authorship: s.authorship as Authorship,
-      when: s.scanKind === 'commit' ? 'after_goal' : 'before_goal',
+      // Model sightings read the current code and know from blame; rule sightings go by scan kind.
+      when: (s.writtenAfterGoal ?? s.scanKind === 'commit') ? 'after_goal' : 'before_goal',
     });
     sightings.set(slug, list);
   }
