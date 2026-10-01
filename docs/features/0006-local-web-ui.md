@@ -144,6 +144,13 @@ not the buttons.
   writes records in their name. The full loop is covered by the API tests.
 - **"Questions per week" is adjustable on the page** (3, 5 or 10), for testing. The budget
   logic is unchanged and 3 stays the default.
+- **Redesigned for demos (2026-10-01), at the builder's request** ("it looks bad, for now just good for a demo"). This goes past "not designed" above, on purpose. It adds no dependencies, only CSS and small markup changes:
+  - a sticky top bar with a logo mark, segmented tabs and the builder's login, plus a title and one-line purpose on each page;
+  - one token-based palette for light and dark;
+  - on the Goals page, a progress ring (learned solid, touched faint), stat tiles, coloured author badges (you, you with an agent, your agent, template), status pills, and an All / My objective / Still to learn filter;
+  - a dark code panel with a coloured author column;
+  - role badges on decisions.
+  Checked on screen against demo data: Goals, the code view and Projects. Ask, Decisions and Calibration are styled by the same classes but were not seen rendered, because the browser extension disconnected.
 - **A double answer is a 409**, not a second record, as in the CLI.
 
 ## Open questions

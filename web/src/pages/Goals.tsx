@@ -138,7 +138,9 @@ function Coverage({ repoId }: { repoId: string }) {
           {checked !== null && checked > 0 ? `Checked ${checked} new commit${checked === 1 ? '' : 's'}. ` : ''}
           {data.commitCount} commits in this project.
         </span>
-        <button onClick={() => setEditing(true)}>Edit goals</button>
+        <button className="btn-secondary" onClick={() => setEditing(true)}>
+          Edit goals
+        </button>
       </div>
       {data.goals.map((g) => (
         <GoalCard key={g.goalId} repoId={repoId} goal={g} positions={data.positions} onRelabelled={() => void load()} />
@@ -147,82 +149,181 @@ function Coverage({ repoId }: { repoId: string }) {
   );
 }
 
+/** Learned (solid) and touched (faint) as one ring, so "still to do" is visible at a glance. */
+function Ring({ learned, touched, total }: { learned: number; touched: number; total: number }) {
+  const r = 34;
+  const c = 2 * Math.PI * r;
+  const frac = (n: number) => (total === 0 ? 0 : n / total);
+  const pct = Math.round(frac(learned) * 100);
+  return (
+    <svg className="ring" viewBox="0 0 84 84" role="img" aria-label={`${pct}% learned`}>
+      <circle cx="42" cy="42" r={r} className="ring-track" />
+      {/* A zero-length round-capped stroke still draws a dot, so empty arcs are not drawn. */}
+      {touched > 0 && <circle
+        cx="42"
+        cy="42"
+        r={r}
+        className="ring-touched"
+        strokeDasharray={`${frac(touched) * c} ${c}`}
+        transform="rotate(-90 42 42)"
+      />}
+      {learned > 0 && <circle
+        cx="42"
+        cy="42"
+        r={r}
+        className="ring-learned"
+        strokeDasharray={`${frac(learned) * c} ${c}`}
+        transform="rotate(-90 42 42)"
+      />}
+      <text x="42" y="40" className="ring-pct">
+        {pct}%
+      </text>
+      <text x="42" y="55" className="ring-label">
+        learned
+      </text>
+    </svg>
+  );
+}
+
+type Filter = 'all' | 'objective' | 'todo';
+
 function GoalCard(props: { repoId: string; goal: Goal; positions: Record<string, number>; onRelabelled: () => void }) {
   const { repoId, goal, positions } = props;
-  const [open, setOpen] = useState(true);
+  const [filter, setFilter] = useState<Filter>('all');
   // The code view opens right under the row it belongs to.
   const [viewing, setViewing] = useState<{ outcome: string; sighting: Sighting } | null>(null);
+
   if (!goal.hasOutcomeList) {
     return (
-      <section className="card">
-        <h2>{goal.skill.name}</h2>
-        <p className="muted">Its outcome list will be drafted for you to review (coming in 0009).</p>
+      <section className="card goal-card">
+        <div className="goal-head">
+          <div className="skill-icon">{goal.skill.name.slice(0, 2)}</div>
+          <div>
+            <h2>{goal.skill.name}</h2>
+            <p className="muted">Its outcome list will be drafted for you to review (coming in 0009).</p>
+          </div>
+        </div>
       </section>
     );
   }
-  const pct = goal.percentLearned ?? 0;
+
+  const shown = goal.outcomes.filter((o) =>
+    filter === 'objective' ? o.inObjective : filter === 'todo' ? o.status !== 'learned' && o.inObjective : true,
+  );
+
   return (
-    <section className="card">
-      <button className="link heading" onClick={() => setOpen(!open)}>
-        <h2>
-          {goal.skill.name}: {pct}% learned
-        </h2>
-      </button>
-      <div className="bar" aria-label={`${pct}% learned`}>
-        <div className="bar-fill" style={{ width: `${pct}%` }} />
+    <section className="card goal-card">
+      <div className="goal-head">
+        <Ring learned={goal.learned} touched={goal.touched} total={goal.total} />
+        <div className="goal-summary">
+          <div className="goal-title">
+            <h2>{goal.skill.name}</h2>
+            <span className="muted small">out of {goal.total} outcomes</span>
+          </div>
+          <div className="stats">
+            <div className="stat">
+              <span className="stat-value">
+                {goal.learned}
+                <span className="stat-of">/{goal.total}</span>
+              </span>
+              <span className="stat-label">learned</span>
+            </div>
+            <div className="stat">
+              <span className="stat-value">
+                {goal.objective.met}
+                <span className="stat-of">/{goal.objective.total}</span>
+              </span>
+              <span className="stat-label">objective met</span>
+            </div>
+            <div className="stat">
+              <span className="stat-value">
+                {goal.touched}
+                <span className="stat-of">/{goal.total}</span>
+              </span>
+              <span className="stat-label">touched in code</span>
+            </div>
+          </div>
+          {goal.touched > goal.learned && (
+            <p className="hint">
+              {goal.touched - goal.learned} touched outcome{goal.touched - goal.learned === 1 ? '' : 's'} waiting for you
+              to document and explain {goal.touched - goal.learned === 1 ? 'it' : 'them'}.
+            </p>
+          )}
+        </div>
       </div>
-      <p className="small">
-        {goal.learned} of {goal.total} learned · objective {goal.objective.met} of {goal.objective.total} met · touched{' '}
-        {goal.touched} of {goal.total}
-        {goal.touched > goal.learned && <span className="muted"> — waiting for you to document and explain them</span>}
-      </p>
-      {open && (
-        <ul className="outcomes">
-          {goal.outcomes.map((o) => {
-            const best = o.sightings[0];
-            return (
-              <li key={o.slug} className={o.inObjective ? '' : 'off-objective'}>
-                <span className={`chip ${o.status}`}>{STATUS[o.status]}</span>
-                <div className="outcome-body">
-                  <div>
-                    <strong>{o.name}</strong> <span className="muted small">{o.description}</span>
-                    {!o.inObjective && <span className="muted small"> · not in this project's objective</span>}
-                  </div>
-                  {best !== undefined && (
-                    <div className="small">
+
+      <div className="segmented small-seg" role="tablist" aria-label="Show outcomes">
+        {(
+          [
+            ['all', 'All'],
+            ['objective', 'My objective'],
+            ['todo', 'Still to learn'],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={filter === id} className={filter === id ? 'seg active' : 'seg'} onClick={() => setFilter(id)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <ul className="outcomes">
+        {shown.map((o) => {
+          const best = o.sightings[0];
+          return (
+            <li key={o.slug} className={`outcome-row${o.inObjective ? '' : ' off-objective'}`}>
+              <span className={`pill status-${o.status}`}>{STATUS[o.status]}</span>
+              <div className="outcome-body">
+                <div className="outcome-name">
+                  <strong>{o.name}</strong>
+                  <span className="muted small">{o.description}</span>
+                  {!o.inObjective && <span className="tag">not in objective</span>}
+                </div>
+                {best !== undefined && (
+                  <div className="where">
+                    <span className={`who-badge who-${best.authorship}`}>
+                      <span className="dot" />
                       {WHO[best.authorship] ?? best.authorship}
-                      {best.when === 'before_goal' ? ', before the goal' : ''}
-                      {best.via === 'orm' ? ' · via an ORM' : ''} ·{' '}
-                      <span className="mono">
-                        {best.path}:{best.lineStart}
-                        {best.lineEnd !== best.lineStart ? `-${best.lineEnd}` : ''}
-                      </span>{' '}
-                      ·{' '}
+                    </span>
+                    {best.when === 'before_goal' && <span className="tag">before the goal</span>}
+                    {best.via === 'orm' && <span className="tag">via an ORM</span>}
+                    <span className="mono path">
+                      {best.path}:{best.lineStart}
+                      {best.lineEnd !== best.lineStart ? `–${best.lineEnd}` : ''}
+                    </span>
+                    <span className="muted small">
                       {/* A snapshot sighting's SHA is where the code was seen when the goal was set,
                           not where it was written. */}
-                      {best.when === 'before_goal' ? 'in the code at ' : ''}commit {positions[best.sha] ?? '?'}{' '}
-                      <button className="link" onClick={() => setViewing({ outcome: o.slug, sighting: best })}>
-                        view code
-                      </button>
-                      {o.sightings.length > 1 && <span className="muted"> · {o.sightings.length - 1} more place{o.sightings.length > 2 ? 's' : ''}</span>}
-                    </div>
-                  )}
-                  {viewing?.outcome === o.slug && (
-                    <CodeView
-                      repoId={repoId}
-                      sha={viewing.sighting.sha}
-                      path={viewing.sighting.path}
-                      focus={[viewing.sighting.lineStart, viewing.sighting.lineEnd]}
-                      onClose={() => setViewing(null)}
-                      onRelabelled={props.onRelabelled}
-                    />
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                      {best.when === 'before_goal' ? 'in the code at ' : ''}commit {positions[best.sha] ?? '?'}
+                      {o.sightings.length > 1 && ` · +${o.sightings.length - 1} more`}
+                    </span>
+                    <button
+                      className="btn-ghost small-btn"
+                      onClick={() => setViewing(viewing?.outcome === o.slug ? null : { outcome: o.slug, sighting: best })}
+                    >
+                      {viewing?.outcome === o.slug ? 'Hide code' : 'View code'}
+                    </button>
+                  </div>
+                )}
+                {viewing?.outcome === o.slug && (
+                  <CodeView
+                    repoId={repoId}
+                    sha={viewing.sighting.sha}
+                    path={viewing.sighting.path}
+                    focus={[viewing.sighting.lineStart, viewing.sighting.lineEnd]}
+                    onClose={() => setViewing(null)}
+                    onRelabelled={props.onRelabelled}
+                  />
+                )}
+              </div>
+            </li>
+          );
+        })}
+        {shown.length === 0 && (
+          <li className="empty-row muted">
+            {filter === 'todo' ? 'Everything in your objective is learned.' : 'No outcomes in your objective yet. Edit goals to tick some.'}
+          </li>
+        )}
+      </ul>
     </section>
   );
 }

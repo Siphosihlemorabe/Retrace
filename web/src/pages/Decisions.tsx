@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react';
 
 import { api, type DecisionView } from '../api.js';
 
+/** Same colours as authorship: made = you, directed = you with an agent, kept = the agent's choice. */
+const ROLE_CLASS: Record<string, string> = { made: 'who-builder', directed: 'who-builder_with_agent', kept: 'who-agent' };
+
 const ROLE: Record<string, string> = {
   made: 'you made it',
   directed: 'you directed your agent',
@@ -36,11 +39,17 @@ export function DecisionsPage() {
       {decisions.map((d) => (
         <section key={d.id} className="card">
           <h2>{d.choice ?? '(no choice written)'}</h2>
-          <p className="muted small">
-            {ROLE[d.role] ?? d.role} · {d.origin.replaceAll('_', ' ')}
+          <p className="where">
+            <span className={`who-badge ${ROLE_CLASS[d.role] ?? ''}`}>
+              <span className="dot" />
+              {ROLE[d.role] ?? d.role}
+            </span>
+            <span className="tag">{d.origin.replaceAll('_', ' ')}</span>
+            <span className="muted small">
             {d.repoName !== null && ` · ${d.repoName}`}
             {d.anchorSha !== null && <span className="mono"> · {d.anchorSha.slice(0, 7)}</span>}
             {d.anchorPath !== null && <span className="mono"> · {d.anchorPath}</span>}
+            </span>
           </p>
           <dl className="shape">
             {(
