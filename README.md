@@ -177,7 +177,8 @@ Scope rule: **if a feature's value depends on someone other than the builder usi
 product, it is not current scope.** Say so rather than building it.
 
 1. Tradeoff capture and explain-back ← *here*
-   ([0001 — dependency decision detector](./docs/features/0001-dependency-decision-detector.md))
+   ([0001 — dependency decision detector](./docs/features/0001-dependency-decision-detector.md),
+   [0002 — capture flow](./docs/features/0002-capture-flow.md), proposed)
 2. Interview prep built on that data
 3. Learning goals and progression over time
 4. Public profile / embed
