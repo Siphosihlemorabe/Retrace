@@ -211,18 +211,18 @@ weeks of a one-person answer budget.
 Edit freely — ordering reflects dependency, not priority.
 
 **Git reading** — `src/core/git/`
-- [ ] Author name and email, committer, and message body (for trailers) per commit
-- [ ] Distinct author identities in a repo, with commit counts
-- [ ] Position of a commit in topological order, and total commits at HEAD. Not
+- [x] Author name and email, committer, and message body (for trailers) per commit
+- [x] Distinct author identities in a repo, with commit counts
+- [x] Position of a commit in topological order, and total commits at HEAD. Not
       first-parent: `e322be8` sits on a merged branch (the repo has 106 merges), so a
       first-parent walk never sees it
 
 **Authorship** — `src/core/detect/authorship.ts`
-- [ ] Agent, automation and template catalogues, seeded from the corpus only
-- [ ] `classifyCommit(meta, identities) → { class, matchedRule }`. Pure, with
+- [x] Agent, automation and template catalogues, seeded from the corpus only
+- [x] `classifyCommit(meta, identities) → { class, matchedRule }`. Pure, with
       `matchedRule` kept so `--all` can say *why*
-- [ ] `Co-Authored-By` trailer parsing for `builder_with_agent`
-- [ ] `AUTHORSHIP_VERSION`
+- [x] `Co-Authored-By` trailer parsing for `builder_with_agent`
+- [x] `AUTHORSHIP_VERSION`
 
 **Detector** — `src/core/detect/dependency.ts`, `rank.ts`
 - [ ] Authorship on every candidate; `other_human` and `automation` suppressed with
@@ -284,6 +284,25 @@ learner, and a much thinner one for interview defence. Better to find that out n
 after building interview prep on top of decision records that don't exist.
 
 ---
+
+## Build notes
+
+- **Lovable credits the builder as co-author on every agent commit.** All 476 agent
+  commits in `frontend-fixer` carry `Co-authored-by: Siphosihlemorabe`. So `agent`
+  means "committed by the agent during the builder's session", not "an agent acting
+  alone". That is more reason for `[a]` to exist. It is not used for classification.
+- **`builder_with_agent` is common, not hypothetical.** `confetti-confectionery` has ~90
+  Claude co-author trailers on human commits, in both `Co-authored-by` and
+  `Co-Authored-By` spellings. Trailer matching is case-insensitive.
+- **Automation catalogue is not from the corpus.** Dependabot and Renovate are included
+  because this doc names them and GitHub fixes their identities. Every other catalogue
+  entry was observed.
+- **Unrecognised `[bot]` identities reach the identity question**, and answering "someone
+  else" files them as `other_human`. Acceptable for v1; a third answer ("a bot") is the
+  fix if it comes up.
+- **Vocabulary drift is now tested.** A test reads the CHECK constraints from the
+  migration files and compares them with `AUTHORSHIP_CLASSES` and the detector's kinds,
+  closing the gap 0001's follow-up left open.
 
 ## Open questions
 

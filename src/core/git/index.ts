@@ -192,3 +192,105 @@ export async function countImportingFiles(
   ]);
   return out.split('\n').filter((l) => l.trim() !== '').length;
 }
+
+export interface CommitMeta {
+  sha: string;
+  authorName: string;
+  authorEmail: string;
+  subject: string;
+  /** Full message body — trailers such as `Co-Authored-By` live here. */
+  body: string;
+  parentCount: number;
+}
+
+/** Author, message and parents of one commit: what authorship is judged from. */
+export async function commitMeta(repo: Repo, sha: string): Promise<CommitMeta> {
+  const format = ['%H', '%an', '%ae', '%s', '%P', '%b'].join(UNIT);
+  const out = await git(repo, ['show', '-s', `--format=${format}`, sha]);
+  const [fullSha = sha, authorName = '', authorEmail = '', subject = '', parents = '', body = ''] =
+    out.split(UNIT);
+  return {
+    sha: fullSha.trim(),
+    authorName,
+    authorEmail,
+    subject,
+    body: body.trimEnd(),
+    parentCount: parents.trim().split(/\s+/).filter(Boolean).length,
+  };
+}
+
+export interface CommitPositions {
+  /** 1-based position in topological order, oldest first. */
+  indexOf: ReadonlyMap<string, number>;
+  total: number;
+}
+
+/**
+ * Where each commit sits in the project's history: "commit 5 of 482".
+ *
+ * Position, not date, because git dates are set by whoever made the commit —
+ * every Lovable root commit says 2025-01-01. Topological rather than
+ * first-parent: on a repo with merged branches a first-parent walk never sees
+ * commits made on a branch (frontend-fixer's e322be8 is one of them).
+ */
+export async function commitPositions(repo: Repo): Promise<CommitPositions> {
+  const out = await git(repo, ['rev-list', '--reverse', '--topo-order', 'HEAD']);
+  const shas = out.split('\n').map((s) => s.trim()).filter((s) => s !== '');
+  return {
+    indexOf: new Map(shas.map((sha, i) => [sha, i + 1])),
+    total: shas.length,
+  };
+}
+
+export interface AuthorIdentity {
+  /** Lower-cased: emails are matched case-insensitively everywhere (citext). */
+  email: string;
+  /** The name most often used with this email. */
+  name: string;
+  commits: number;
+}
+
+/**
+ * Distinct author emails in a repo, most commits first. Raw `%an`/`%ae`, not
+ * `.mailmap`-resolved: authorship is judged from what the commit itself says.
+ */
+export async function authorIdentities(repo: Repo): Promise<AuthorIdentity[]> {
+  const out = await git(repo, ['log', `--format=%an${UNIT}%ae`, 'HEAD']);
+  const byEmail = new Map<string, { names: Map<string, number>; commits: number }>();
+
+  for (const line of out.split('\n')) {
+    if (line.trim() === '') continue;
+    const [name = '', rawEmail = ''] = line.split(UNIT);
+    const email = rawEmail.trim().toLowerCase();
+    const entry = byEmail.get(email) ?? { names: new Map(), commits: 0 };
+    entry.commits += 1;
+    entry.names.set(name, (entry.names.get(name) ?? 0) + 1);
+    byEmail.set(email, entry);
+  }
+
+  return [...byEmail.entries()]
+    .map(([email, { names, commits }]) => ({
+      email,
+      name: [...names.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '',
+      commits,
+    }))
+    .sort((a, b) => b.commits - a.commits || a.email.localeCompare(b.email));
+}
+
+/**
+ * The root reached by following first parents from HEAD. Part of a local
+ * clone's identity: unlike "any root", it stays the same as history grows,
+ * and a repo that merged in unrelated history still has exactly one.
+ */
+export async function firstParentRoot(repo: Repo): Promise<string> {
+  const out = await git(repo, ['rev-list', '--first-parent', '--max-parents=0', 'HEAD']);
+  const root = out.split('\n').map((s) => s.trim()).find((s) => s !== '');
+  if (root === undefined) throw new GitError(`no root commit found in ${repo.path}`);
+  return root;
+}
+
+/** The checked-out branch, or `HEAD` when detached. */
+export async function currentBranch(repo: Repo): Promise<string> {
+  const out = await gitAllowFail(repo, ['symbolic-ref', '--short', 'HEAD']);
+  return out.trim() === '' ? 'HEAD' : out.trim();
+}
