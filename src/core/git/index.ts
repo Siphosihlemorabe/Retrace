@@ -300,3 +300,72 @@ export async function trackedFiles(repo: Repo): Promise<string[]> {
   const out = await git(repo, ['ls-tree', '-r', '--name-only', 'HEAD']);
   return out.split('\n').map((s) => s.trim()).filter((s) => s !== '');
 }
+
+/**
+ * The line numbers (in the new file) each file gained in a commit, against its
+ * first parent. A root commit added every line it contains. Deleted files and
+ * binary files have none.
+ */
+export async function addedLines(
+  repo: Repo,
+  sha: string,
+  parentCount: number,
+): Promise<Map<string, Set<number>>> {
+  const args =
+    parentCount === 0
+      ? ['show', '--format=', '--unified=0', '--no-color', '--no-ext-diff', sha]
+      : ['diff', '--unified=0', '--no-color', '--no-ext-diff', `${sha}^1`, sha];
+  const out = await git(repo, args);
+
+  const result = new Map<string, Set<number>>();
+  let current: Set<number> | null = null;
+  for (const line of out.split('\n')) {
+    if (line.startsWith('+++ ')) {
+      const target = line.slice(4).trim().replace(/^"(.*)"$/, '$1');
+      if (target === '/dev/null') {
+        current = null;
+        continue;
+      }
+      const path = target.replace(/^b\//, '');
+      current = result.get(path) ?? new Set();
+      result.set(path, current);
+      continue;
+    }
+    const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
+    if (hunk !== null && current !== null) {
+      const start = Number(hunk[1]);
+      const count = hunk[2] === undefined ? 1 : Number(hunk[2]);
+      for (let n = start; n < start + count; n += 1) current.add(n);
+    }
+  }
+  for (const [path, lines] of result) if (lines.size === 0) result.delete(path);
+  return result;
+}
+
+/** Which commit last changed each line in a range, at `sha`. */
+export async function blameLines(
+  repo: Repo,
+  sha: string,
+  path: string,
+  start: number,
+  end: number,
+): Promise<Map<number, string>> {
+  const out = await git(repo, ['blame', '--porcelain', '-L', `${start},${end}`, sha, '--', path]);
+  const result = new Map<number, string>();
+  for (const line of out.split('\n')) {
+    const header = /^([0-9a-f]{40}) \d+ (\d+)/.exec(line);
+    if (header !== null) result.set(Number(header[2]), header[1] as string);
+  }
+  return result;
+}
+
+/** Every tracked path at a commit. */
+export async function filesAt(repo: Repo, sha: string): Promise<string[]> {
+  const out = await git(repo, ['ls-tree', '-r', '--name-only', sha]);
+  return out.split('\n').map((s) => s.trim()).filter((s) => s !== '');
+}
+
+/** HEAD's full SHA. */
+export async function headSha(repo: Repo): Promise<string> {
+  return (await git(repo, ['rev-parse', 'HEAD'])).trim();
+}

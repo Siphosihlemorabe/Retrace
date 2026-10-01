@@ -229,11 +229,11 @@ Per goal, per outcome, the strongest status reached:
 - [x] Catalogue for SQL, Docker and Node/REST (32 outcomes), each detector with a positive
       and a negative fixture; `OUTCOMES_VERSION`
 - [x] Sync the catalogue to tables
-- [ ] Scan: unsighted commits → sight, authorship, added lines, detectors, sightings
-- [ ] Line authorship: `git blame` on highlighted ranges, cached per commit, relabels applied
-- [ ] Goals: declare (with backfill and a first scan), edit with history; other skills saved
+- [x] Scan: unsighted commits → sight, authorship, added lines, detectors, sightings
+- [x] Line authorship: `git blame` on highlighted ranges, cached per commit, relabels applied
+- [x] Goals: declare (with backfill and a first scan), edit with history; other skills saved
       without a list
-- [ ] Coverage: statuses, percentage (full-list denominator), objective; pure over stored rows
+- [x] Coverage: statuses, percentage (full-list denominator), objective; pure over stored rows
 
 **CLI and web**
 - [ ] `npm run goals <repo>`, `npm run coverage <repo>`
@@ -246,11 +246,11 @@ Per goal, per outcome, the strongest status reached:
 **Tests**
 - [ ] Detectors against fixtures, including false positives that must not match
       (`Array.prototype.join`, "join" in a comment)
-- [ ] Fixture repo: commit 1 (agent, has a JOIN), goal set at commit 2, a builder JOIN at 3,
+- [x] Fixture repo: commit 1 (agent, has a JOIN), goal set at commit 2, a builder JOIN at 3,
       an agent GROUP BY at 4, a Claude-trailer commit at 5. Each sighting gets the right
       author and before/after label
-- [ ] Unticking an outcome never changes the percentage's denominator
-- [ ] A relabel overrides blame for exactly those lines
+- [x] Unticking an outcome never changes the percentage's denominator
+- [x] A relabel overrides blame for exactly those lines
 - [ ] Copy checks: no overall score; "learned" never appears for undocumented or unchecked
       outcomes
 
@@ -294,6 +294,24 @@ must read as *what to work on next*, never as a verdict (G5).
   transactions, upserts and filtering, all SQL from its Supabase migrations and client.
   `Konnect`: nine Docker outcomes from its Python Dockerfile, and SQL from its
   migrations. `frontend-fixer`: nothing, which is correct for a frontend-only repo.
+
+- **"Already in the project" is a snapshot of HEAD, not a walk of history.** When a goal is
+  set, the code as it is at that moment is scanned once, and each hit is attributed line by
+  line with blame. Walking every past commit would also credit code that has since been
+  deleted, and takes minutes on a long history. Setting SQL and Docker goals on
+  `confetti-confectionery` (59 commits) took about 14 seconds.
+- **A relabel applies at the commit it was made on.** "An AI wrote this" is stored with
+  the exact (commit, file, lines), and re-attributes the sightings it overlaps there. It
+  does not follow those lines into later commits yet. Following them would mean tracking
+  each line back to its original commit, which is a later refinement if relabels turn out
+  to be common.
+- **Imported repos show their first commit as "template".** `confetti`'s root is a wholesale
+  import of existing code ("joins the company pipeline"), and 0003 classifies every root
+  commit as a template. Its lines therefore read as template, not as the builder's. This is
+  0001's open question 1b, now visible in coverage. Until it's decided, a relabel ("I wrote
+  this") is the fix.
+- **A custom skill's `kind` is stored as "technology"**, because `skills.kind` is required and
+  the taxonomy question in `CLAUDE.md` is still open.
 
 ## Open questions
 
