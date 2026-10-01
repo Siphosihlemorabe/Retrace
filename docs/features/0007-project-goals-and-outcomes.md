@@ -236,8 +236,8 @@ Per goal, per outcome, the strongest status reached:
 - [x] Coverage: statuses, percentage (full-list denominator), objective; pure over stored rows
 
 **CLI and web**
-- [ ] `npm run goals <repo>`, `npm run coverage <repo>`
-- [ ] "New project" can create the folder (`git init`, an empty first commit) and,
+- [x] `npm run goals <repo>`, `npm run coverage <repo>`
+- [x] "New project" can create the folder (`git init`, an empty first commit) and,
       if the builder confirms and `gh` is available, the GitHub repo
 - [ ] Web: "New project" (any skill, tick the objective), a Coverage tab (percentages and
       the outcome list), and a code view (highlighted ranges, an authorship gutter,

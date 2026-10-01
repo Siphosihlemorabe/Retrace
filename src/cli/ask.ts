@@ -23,11 +23,11 @@ import {
 } from '../core/decisions/capture.js';
 import { checkCost, type CostContext, type CostVerdict } from '../core/decisions/cost-check.js';
 import { questionFor, type AnswerAction } from '../core/decisions/framing.js';
-import { loadIdentitySet, recordIdentity, unresolvedIdentities } from '../core/decisions/identity.js';
 import { registerLocalClone, type LocalClone } from '../core/decisions/local.js';
 import { recordDecision, reviseDecision, type DecisionRole, type DecisionShape } from '../core/decisions/record.js';
 import type { StoredCandidate } from '../core/detect/candidate-row.js';
-import { authorIdentities, GitError, openRepo, type Repo } from '../core/git/index.js';
+import { GitError, openRepo, type Repo } from '../core/git/index.js';
+import { identitySetup } from './identity-setup.js';
 import { createPrompter, type Prompter } from './prompt.js';
 import { openSession, SetupError, type Session } from '../session.js';
 
@@ -91,28 +91,6 @@ async function main(argv: string[]): Promise<number> {
   } finally {
     prompt.close();
     await session.end();
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 1. Identities (0003 §2) — setup, not budgeted
-// ---------------------------------------------------------------------------
-
-async function identitySetup(session: Session, repo: Repo, clone: LocalClone, prompt: Prompter): Promise<void> {
-  const known = await loadIdentitySet(session.db, session.userId);
-  const unresolved = unresolvedIdentities(await authorIdentities(repo), known);
-  if (unresolved.length === 0) return;
-
-  console.log('\n  First, whose commits are these? Asked once per identity.\n');
-  for (const identity of unresolved) {
-    const answer = await prompt.choose(
-      `  Who is ${JSON.stringify(identity.name)} <${identity.email}>?   ${identity.commits} commit${identity.commits === 1 ? '' : 's'} in ${clone.name}\n` +
-        '    [m] Me   [o] Someone else   [l] Ask me later\n  > ',
-      ['m', 'o', 'l'],
-    );
-    if (answer === null) return;
-    if (answer === 'l') continue;
-    await recordIdentity(session.db, session.userId, identity, answer === 'm' ? 'me' : 'other');
   }
 }
 
