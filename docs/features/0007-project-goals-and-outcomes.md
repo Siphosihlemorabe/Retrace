@@ -244,7 +244,7 @@ Per goal, per outcome, the strongest status reached:
       relabel by selecting lines)
 
 **Tests**
-- [ ] Detectors against fixtures, including false positives that must not match
+- [x] Detectors against fixtures, including false positives that must not match
       (`Array.prototype.join`, "join" in a comment)
 - [x] Fixture repo: commit 1 (agent, has a JOIN), goal set at commit 2, a builder JOIN at 3,
       an agent GROUP BY at 4, a Claude-trailer commit at 5. Each sighting gets the right

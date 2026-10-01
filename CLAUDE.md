@@ -289,18 +289,16 @@ section recording it (see 0001's "First run") rather than silently rewriting the
 
 ## Current feature
 
-**Built:** detection, authorship and capture (0001–0003), the terminal commands, and the
-local web UI (0006, `npm run ui`). Verified against a throwaway test database. The
-builder's own database is not connected yet.
+**Built:** detection, authorship and capture (0001–0003), the local web UI (0006, `npm run
+ui`), and **0007 — goals and learning outcomes** (`npm run goals`, `npm run coverage`, the
+Goals tab with the code view). Verified against a throwaway test database. The builder's
+own database is not connected yet.
 
 **Agreed next (2026-10-01):** learning goals while building, as described in
 [`docs/product-direction.md`](./docs/product-direction.md). Build in this order, each
 usable on its own:
 
-1. [0007 — Project goals and learning outcomes](./docs/features/0007-project-goals-and-outcomes.md):
-   goals on any skill (new or existing projects), outcome lists and rules for SQL, Docker
-   and Node/REST, touched lines highlighted with who wrote them, relabelling, per-goal
-   percentages
+1. ~~0007 — Project goals and learning outcomes~~: **built** (2026-10-01)
 2. [0009 — Detailed questions, and lists for any skill](./docs/features/0009-model-questions.md):
    the builder's own Claude Code by default; questions about their lines, their agent's
    lines, big decisions and objectives; a weekly number, minimum 3

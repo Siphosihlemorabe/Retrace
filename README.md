@@ -160,7 +160,9 @@ npm run db:migrate
 ```sh
 npm run dev          # server + worker, watch mode
 npm run detect <dir> # run the detector against a local clone, print candidates, write nothing
-npm run ui           # the same loop in a browser, at http://127.0.0.1:3000 (0006)
+npm run ui           # the web app, at http://127.0.0.1:3000: goals, coverage, questions
+npm run goals <dir>  # set what you want to learn in a project (--new to start one)
+npm run coverage <dir> # what your code touches of your goals, and who wrote it
 npm run ask <dir>    # this week's questions; --manual, --calibration, --limit <n>
 npm run decisions    # what you have recorded, and what each record is missing
 npm run identities   # which git identities are yours; --me / --not-me <email> to correct
