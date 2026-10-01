@@ -1,6 +1,6 @@
 # 0011 — Practice and check: a judge that helps, and a check that counts
 
-**Status:** proposed (2026-10-01), from [product-direction.md](../product-direction.md) §3.5–3.7
+**Status:** agreed (2026-10-01). The 24-hour wait and "checks open once documented" were confirmed by the builder, from [product-direction.md](../product-direction.md) §3.5–3.7
 **Build order:** step 2. Fourth of 0007 → 0009 → 0010 → 0011 → 0012 → 0008
 **Writes to the database:** yes — practice feedback, checks, check results; learned status
 **Guardrails:** G3, G5, G7, G13, G14, G16 (see [how-it-works](../how-it-works.md#guardrails))

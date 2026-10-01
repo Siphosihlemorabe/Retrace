@@ -1,6 +1,6 @@
 # 0007 — Project goals and learning outcomes
 
-**Status:** proposed — rewritten 2026-10-01 to match [product-direction.md](../product-direction.md) (§3.1–3.3, 3.6–3.7)
+**Status:** agreed (2026-10-01): building. Matches [product-direction.md](../product-direction.md) (§3.1–3.3, 3.6–3.7)
 **Build order:** step 2, learning goals while building. First of 0007 → 0009 → 0010 → 0011 → 0012 → 0008
 **Writes to the database:** yes — goals, objectives, outcome sightings, line labels, commit sightings
 **Guardrails:** G2, G3, G4, G5, G8, G11, G12, G13, G14 (see [how-it-works](../how-it-works.md#guardrails))
@@ -193,7 +193,7 @@ Per goal, per outcome, the strongest status reached:
 
 ---
 
-## Decision: where the outcome catalogue lives *(awaiting builder)*
+## Decision: where the outcome catalogue lives — **chosen: 1** (builder, 2026-10-01)
 
 1. **In code, synced to a table** *(recommended)*. Outcomes and detectors live together in
    `src/core/outcomes/catalog/`, so a detector change and its outcome are one diff. They are
@@ -202,7 +202,7 @@ Per goal, per outcome, the strongest status reached:
 2. **Rows only**, with detectors as stored regexes. Editable without a release, but
    untestable, and they drift from the code that runs them.
 
-## Decision: where sightings live *(awaiting builder)*
+## Decision: where sightings live — **chosen: 1** (builder, 2026-10-01)
 
 1. **Their own `outcome_sightings` table** *(recommended)*. Sightings are machine
    judgements (versioned, recomputable), and `evidence` stays for what the profile shows
@@ -236,6 +236,8 @@ Per goal, per outcome, the strongest status reached:
 
 **CLI and web**
 - [ ] `npm run goals <repo>`, `npm run coverage <repo>`
+- [ ] "New project" can create the folder (`git init`, an empty first commit) and,
+      if the builder confirms and `gh` is available, the GitHub repo
 - [ ] Web: "New project" (any skill, tick the objective), a Coverage tab (percentages and
       the outcome list), and a code view (highlighted ranges, an authorship gutter,
       relabel by selecting lines)
@@ -273,8 +275,11 @@ must read as *what to work on next*, never as a verdict (G5).
 
 ## Open questions
 
-1. Starting from an **empty folder**: should "New project" run `git init`, or only accept
-   an existing repo?
+1. ~~Starting from an empty folder?~~ **Decided (builder, 2026-10-01):** "New project"
+   always creates a local folder, runs `git init`, and makes an empty first commit, so goals
+   are saved before any code exists. Optionally, and asked each time, it also creates the
+   repo on GitHub and connects it, only when GitHub's `gh` tool is installed and logged in.
+   That is outward-facing, so it is never done without the builder confirming.
 2. **Depth within an outcome** (LEFT versus self-join versus anti-join): sub-outcomes later,
    and the slug scheme (`sql.joins.left`) leaves room.
 

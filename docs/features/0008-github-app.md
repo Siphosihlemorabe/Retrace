@@ -1,6 +1,6 @@
 # 0008 — GitHub App: commits arrive as you push
 
-**Status:** proposed (2026-10-01). The builder chose the GitHub App over local-only tracking; agreed to build it **last**, after 0012 (product-direction §7)
+**Status:** agreed (2026-10-01). The builder chose the GitHub App over local-only tracking; agreed to build it **last**, after 0012 (product-direction §7)
 **Build order:** supports steps 2–3. Last of 0007 → 0009 → 0010 → 0011 → 0012 → 0008
 **Writes to the database:** yes — installations, repos, webhook deliveries, commit sightings, jobs
 **Guardrails:** G1, G7, G8, G9, G13, G15 (see [how-it-works](../how-it-works.md#guardrails))

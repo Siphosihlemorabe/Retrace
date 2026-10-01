@@ -1,6 +1,6 @@
 # 0010 — Documenting: notes on your code, checked for tradeoffs and alternatives
 
-**Status:** proposed (2026-10-01), from [product-direction.md](../product-direction.md) §3.3 step 4 and §8.1
+**Status:** agreed (2026-10-01), from [product-direction.md](../product-direction.md) §3.3 step 4 and §8.1
 **Build order:** step 2. Third of 0007 → 0009 → 0010 → 0011 → 0012 → 0008
 **Writes to the database:** yes — notes, note revisions, tradeoff checks, disagreements
 **Guardrails:** G3, G5, G7, G11, G13, G14, G16 (see [how-it-works](../how-it-works.md#guardrails))

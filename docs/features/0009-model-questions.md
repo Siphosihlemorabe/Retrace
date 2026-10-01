@@ -1,6 +1,6 @@
 # 0009 — Detailed questions, and outcome lists for any skill, via a model you connect
 
-**Status:** proposed — rewritten 2026-10-01 to match [product-direction.md](../product-direction.md) (§3.2, 3.4)
+**Status:** agreed (2026-10-01). Matches [product-direction.md](../product-direction.md) (§3.2, 3.4)
 **Build order:** step 2. Second of 0007 → 0009 → 0010 → 0011 → 0012 → 0008
 **Writes to the database:** yes — model call log and cache, generated questions, answers, model-drafted outcome lists, model-found sightings
 **Guardrails:** G3, G5, G6, G7, G11, G13, G14, G15, G16, G17 (see [how-it-works](../how-it-works.md#guardrails))
@@ -137,7 +137,7 @@ with `source: builder`.
 
 ---
 
-## Decision: what happens when the model is unavailable or capped
+## Decision: what happens when the model is unavailable or capped — **chosen: 1** (builder, 2026-10-01)
 
 1. **Fall back to rule-based questions, and say so** *(recommended)*. The loop never blocks.
 2. **Wait.** Better questions, but sometimes nothing at all.

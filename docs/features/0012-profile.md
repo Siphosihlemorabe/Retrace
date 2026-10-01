@@ -1,6 +1,6 @@
 # 0012 — A shareable profile, published as a snapshot
 
-**Status:** proposed (2026-10-01), from [product-direction.md](../product-direction.md) §3.8
+**Status:** agreed (2026-10-01), from [product-direction.md](../product-direction.md) §3.8
 **Build order:** step 3. Fifth of 0007 → 0009 → 0010 → 0011 → 0012 → 0008
 **Writes to the database:** a record of each publish (what was published, and when)
 **Guardrails:** G1 (its one exception), G2, G3, G5, G9, G21 (see [how-it-works](../how-it-works.md#guardrails))
@@ -85,7 +85,7 @@ deliberate exception to CLAUDE.md's scope rule.
 3. Each publish records what was published (item ids and a content hash) and when, so the
    builder can see what's live.
 
-## Decision: publish target *(awaiting builder)*
+## Decision: publish target — **chosen: 1** (builder, 2026-10-01)
 
 1. **A GitHub Pages repo the builder owns** *(recommended)*. Free, under their name, and the
    same place the code lives. Costs: a second repo, and Pages setup once.
@@ -100,6 +100,7 @@ deliberate exception to CLAUDE.md's scope rule.
 - [ ] Preview of exactly what goes public, then confirm, then publish (commit and push to the
       target)
 - [ ] A publish record: what, when, content hash
+- [ ] Settings: the profile name (typed once), the publish repo, and projects hidden from the profile
 - [ ] **Tests:** private data never rendered (practice, unlearned, unpublished notes); private
       repo → claim; copy checks for no "verified", no overall score, no technology count
 
@@ -120,6 +121,8 @@ If any of those three slips, the profile overstates the builder.
 
 ## Open questions
 
-1. **Profile name and URL:** the real name and GitHub login, or something else?
-2. **Can the builder hide a whole project from the profile?** Leaning: yes, per project, at
-   publish time.
+1. ~~Profile name and URL?~~ **Decided (builder, 2026-10-01):** a name the builder types
+   once (it can be their GitHub username), and GitHub's free Pages address to start.
+   Their own domain can be added later.
+2. ~~Hide a whole project?~~ **Decided (builder, 2026-10-01):** yes, per project, at publish
+   time.
