@@ -74,6 +74,15 @@ export const AUTOMATION: readonly KnownIdentity[] = [
   { label: 'Renovate', match: (name) => name === 'renovate[bot]' },
 ];
 
+/**
+ * Identities that only ever write template commits. Not used to classify — a
+ * root commit is a template whoever wrote it — only so the identity question
+ * never asks "is Lovable you?". Seen on all three Lovable roots.
+ */
+export const TEMPLATE_AUTHORS: readonly KnownIdentity[] = [
+  { label: 'Lovable', match: (_name, email) => email === 'noreply@lovable.dev' },
+];
+
 /** Root commits written by an app builder: `template: vite_react_shadcn_ts_2026-04-20`. */
 const TEMPLATE_SUBJECT = /^template:\s*(\S+)/i;
 
@@ -112,7 +121,7 @@ export function coAuthors(body: string): CoAuthor[] {
 export function knownNonHuman(name: string, email: string): string | null {
   const n = name.trim().toLowerCase();
   const e = email.trim().toLowerCase();
-  for (const entry of [...AGENTS, ...AUTOMATION]) {
+  for (const entry of [...AGENTS, ...AUTOMATION, ...TEMPLATE_AUTHORS]) {
     if (entry.match(n, e)) return entry.label;
   }
   return null;

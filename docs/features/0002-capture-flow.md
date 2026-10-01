@@ -185,8 +185,8 @@ Edit freely — ordering reflects dependency, not priority.
   follow-up**, which also fixes the broken CHECK constraints in 0000. Must land first.
 
 **Local identity** — `src/core/decisions/` or `src/cli/`
-- [ ] Seed the builder's `users` row from env, idempotently
-- [ ] Register a local clone as a `repos` row keyed on its absolute path + root commit SHA
+- [x] Seed the builder's `users` row from env, idempotently
+- [x] Register a local clone as a `repos` row keyed on its absolute path + root commit SHA
 
 **Detector version** — defined in 0001's follow-up
 - [ ] Stored on every candidate row
@@ -285,5 +285,8 @@ Recorded as the build goes, rather than by rewriting the plan above.
   decisions, so pointed at the real database they would mix fixture rows into real ones.
   A vitest global setup migrates the test database before every run, and `REQUIRE_DB=1`
   turns a skip into a failure (G20).
+- **A local clone's root is the first-parent root**, and its path is canonicalised
+  (`realpath`). "Any root" changes when unrelated history is merged in. The first-parent
+  root never does, and `../x`, `./x/` and a differently-cased Windows path are one repo.
 - **`.env` is loaded by Node itself** (`--env-file-if-exists`, `process.loadEnvFile`),
   not dotenv. One less dependency.

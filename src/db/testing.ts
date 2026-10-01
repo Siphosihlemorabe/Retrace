@@ -6,6 +6,12 @@
  * rows into real ones, and their cleanup could delete real data. Two variables
  * cost one more line in .env and make that mistake impossible.
  */
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
+
+import * as schema from './schema.js';
+import type { Db } from './types.js';
+
 export const testDatabaseUrl = process.env['TEST_DATABASE_URL'];
 
 /**
@@ -19,4 +25,11 @@ export function skipWithoutDatabase(): boolean {
     throw new Error('REQUIRE_DB=1 but TEST_DATABASE_URL is not set');
   }
   return true;
+}
+
+/** A drizzle handle on the test database. The caller ends the pool. */
+export async function openTestDb(): Promise<{ db: Db; pool: pg.Pool }> {
+  if (!testDatabaseUrl) throw new Error('TEST_DATABASE_URL not set');
+  const pool = new pg.Pool({ connectionString: testDatabaseUrl });
+  return { db: drizzle(pool, { schema }), pool };
 }
