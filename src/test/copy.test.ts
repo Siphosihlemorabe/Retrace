@@ -13,7 +13,9 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 
 const ROOTS = ['web/src', 'src/cli'];
-const BANNED = /\b(verified|proven|guaranteed|certified|streaks?|badges?|points|overall score|your score)\b/i;
+// Words, not identifiers: `who-badge` as a class name is not copy, so a match must
+// not be joined to a hyphen, dot or word character on either side.
+const BANNED = /(?<![-.\w])(verified|proven|guaranteed|certified|streaks?|badges?|points|overall score|your score)(?![-\w])/i;
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
