@@ -226,8 +226,9 @@ Per goal, per outcome, the strongest status reached:
 - [ ] `commit_sightings.source` gains `local_scan`
 
 **Outcomes** — `src/core/outcomes/`
-- [ ] Catalogue for SQL, Docker and Node/REST, each detector with a positive and a negative
-      fixture; sync to tables; `OUTCOMES_VERSION`
+- [x] Catalogue for SQL, Docker and Node/REST (32 outcomes), each detector with a positive
+      and a negative fixture; `OUTCOMES_VERSION`
+- [ ] Sync the catalogue to tables
 - [ ] Scan: unsighted commits → sight, authorship, added lines, detectors, sightings
 - [ ] Line authorship: `git blame` on highlighted ranges, cached per commit, relabels applied
 - [ ] Goals: declare (with backfill and a first scan), edit with history; other skills saved
@@ -272,6 +273,27 @@ motivation the builder asked for ("make the dev know they still need to improve"
 must read as *what to work on next*, never as a verdict (G5).
 
 ---
+
+## Build notes
+
+- **Detectors see the whole file but only credit added lines.** A detector reads the file as
+  it is at the commit, because multi-stage builds and layer order are properties of the
+  whole Dockerfile. A hit only counts for a commit if it includes a line that commit added,
+  so old code is never credited to a new commit.
+- **SQL inside JS/TS only counts inside SQL-looking strings and templates.** That is what
+  keeps `Array.prototype.join` and the word "join" in a comment from ever counting.
+- **The first real-repo run found three noisy rules the fixtures had missed.** Each fix now
+  has a regression fixture:
+  - A Drizzle `check('name', sql`…`)` rule matched a test helper, `check("POST status →
+    401", …)`: 78 false constraints in `confetti-confectionery`. It now requires the name
+    and an `sql` template.
+  - Input validation fired on a React form's `z.object` (`frontend-fixer` `Login.tsx`). It
+    now requires parsing *request* input.
+  - `WITH CHECK (…)` row-level-security policies counted as constraints. They are excluded.
+- **What the snapshot found after the fixes:** `confetti`: constraints, migrations,
+  transactions, upserts and filtering, all SQL from its Supabase migrations and client.
+  `Konnect`: nine Docker outcomes from its Python Dockerfile, and SQL from its
+  migrations. `frontend-fixer`: nothing, which is correct for a frontend-only repo.
 
 ## Open questions
 
