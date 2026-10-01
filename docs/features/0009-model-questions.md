@@ -153,21 +153,21 @@ with `source: builder`.
 - [ ] Consent per repo before code leaves the machine, naming the provider
 
 **Questions** — `src/core/questions/`
-- [ ] Inputs for touched outcomes, untouched objective outcomes, and dependency candidates
-- [ ] Prompt (`QUESTION_PROMPT_VERSION`) and output schema, with short key points stored and
+- [x] Inputs for touched outcomes, untouched objective outcomes, and dependency candidates
+- [x] Prompt (`QUESTION_PROMPT_VERSION`) and output schema, with short key points stored and
       hidden
-- [ ] Weekly number in settings, minimum 3, enforced; priority as in §2
-- [ ] Rule-based fallback for every target
+- [x] Weekly number in settings, minimum 3, enforced; priority as in §2
+- [x] Rule-based fallback for every target
 
 **Outcome lists for any skill** — `src/core/outcomes/`
 - [ ] Draft prompt and schema; a review screen; save as the builder's reviewed list
 - [ ] Model scan of added lines for those outcomes, giving sightings with `found_by: model`
 
 **Schema**
-- [ ] `practice_answers` (user, question, answer, answered at). No foreign key to `evidence` or
+- [x] `practice_answers` (user, question, answer, answered at). No foreign key to `evidence` or
       `skill_claims` (G3)
-- [ ] `skill_outcomes.source` in (`builtin`, `model_reviewed`, `builder`)
-- [ ] `repos.llm_allowed_at`; the generated question linked to its cache entry
+- [x] `skill_outcomes.source` in (`builtin`, `model_reviewed`, `builder`)
+- [x] `repos.llm_allowed_at`; the generated question linked to its cache entry
 
 **Web and CLI**
 - [ ] The question card: code excerpt with line numbers, who wrote it, the question, an

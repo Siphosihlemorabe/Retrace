@@ -369,3 +369,16 @@ export async function filesAt(repo: Repo, sha: string): Promise<string[]> {
 export async function headSha(repo: Repo): Promise<string> {
   return (await git(repo, ['rev-parse', 'HEAD'])).trim();
 }
+
+/** Up to `limit` (path, line) places at HEAD whose line matches an extended regex. */
+export async function grepLines(repo: Repo, pattern: string, limit: number): Promise<{ path: string; line: number }[]> {
+  const out = await gitAllowFail(repo, ['grep', '-n', '-E', pattern, 'HEAD', '--', ...SOURCE_GLOBS]);
+  const places: { path: string; line: number }[] = [];
+  for (const row of out.split('\n')) {
+    // "HEAD:src/a.ts:12:import x from 'y'"
+    const m = /^HEAD:(.+?):(\d+):/.exec(row);
+    if (m !== null) places.push({ path: m[1] as string, line: Number(m[2]) });
+    if (places.length >= limit) break;
+  }
+  return places;
+}
