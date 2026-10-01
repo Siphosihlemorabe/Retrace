@@ -289,33 +289,33 @@ section recording it (see 0001's "First run") rather than silently rewriting the
 
 ## Current feature
 
-**Built: [0002 — Capture flow](./docs/features/0002-capture-flow.md) with
-[0003 — Authorship](./docs/features/0003-authorship.md)** (2026-10-01). The detector says who
-made each change, and `npm run ask` asks about this week's few, framed by that, and stores
-what comes back. Verified against a throwaway test database, not yet the builder's own.
+**Built:** detection, authorship and capture (0001–0003), the terminal commands, and the
+local web UI (0006, `npm run ui`). Verified against a throwaway test database. The
+builder's own database is not connected yet.
 
-**Next, before any new feature:** the builder's real `.env` (`DATABASE_URL`,
-`TEST_DATABASE_URL`, `RETRACE_GITHUB_USER_ID`, `RETRACE_GITHUB_LOGIN`), `npm run db:migrate`,
-then two weeks of `npm run ask` on real repos. 0002's and 0003's "How we will know it
-worked" sections say what to read at the end. The cost check's fixtures become real answers
-then.
-
-**Proposed, for the builder's review (2026-10-01):** the direction change above, in three
-specs, to build in this order. 0007 is what everything attaches to, and 0009 fixes the
-weakness the builder named (questions not detailed enough):
+**Agreed next (2026-10-01):** learning goals while building, as described in
+[`docs/product-direction.md`](./docs/product-direction.md). Build in this order, each
+usable on its own:
 
 1. [0007 — Project goals and learning outcomes](./docs/features/0007-project-goals-and-outcomes.md):
-   SQL, Docker and Node/REST outcome lists, rule-based detection on each new commit, coverage
-2. [0009 — Detailed questions via a connected model](./docs/features/0009-model-questions.md):
-   the builder's own Claude Code by default (`claude -p`, tools off), Ollama or an API key
-   as alternatives; cached, capped, never evidence
-3. [0008 — GitHub App](./docs/features/0008-github-app.md): commits arrive on every push
+   goals on any skill (new or existing projects), outcome lists and rules for SQL, Docker
+   and Node/REST, touched lines highlighted with who wrote them, relabelling, per-goal
+   percentages
+2. [0009 — Detailed questions, and lists for any skill](./docs/features/0009-model-questions.md):
+   the builder's own Claude Code by default; questions about their lines, their agent's
+   lines, big decisions and objectives; a weekly number, minimum 3
+3. [0010 — Documenting](./docs/features/0010-documenting.md): line notes, then a check for
+   tradeoffs and alternatives
+4. [0011 — Practice and check](./docs/features/0011-practice-and-check.md): a judge that
+   coaches (never counts), and a check that counts (pass or not yet)
+5. [0012 — Shareable profile](./docs/features/0012-profile.md): published as a snapshot
+6. [0008 — GitHub App](./docs/features/0008-github-app.md): commits arrive on every push
 
-Also built: [0006 — Local web UI](./docs/features/0006-local-web-ui.md) (`npm run ui`).
-Deprioritised: [0004](./docs/features/0004-inherited-settings-detector.md). Partly superseded by 0009:
-[0005](./docs/features/0005-explain-back.md). See [how-it-works](./docs/how-it-works.md#roadmap-against-the-build-order).
+Decisions inside those specs marked "awaiting builder" are still open. Ask before
+building past them.
 
-Previous: [0001 — Dependency decision detector](./docs/features/0001-dependency-decision-detector.md) — built, with its follow-up.
+Kept: the dependency detector (0001). Deprioritised: [0004](./docs/features/0004-inherited-settings-detector.md).
+Its judge moved to 0011: [0005](./docs/features/0005-explain-back.md). Interview prep is now 0013.
 
 ## Open questions
 

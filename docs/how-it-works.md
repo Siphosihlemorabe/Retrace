@@ -31,7 +31,7 @@ the doc says so in a decision section. It does not happen quietly in code.
               ┌─────────────────────┐                  ┌──────────────────────┐
               │ PRACTICE (private)  │                  │ EVIDENCE (pointers)  │
               │ explain-back  0005  │  ───never───▶    │ repo · SHA · path ·  │
-              │ interview prep 0010 │                  │ lines · what it shows│
+              │ interview prep 0013 │                  │ lines · what it shows│
               │ coached, unlimited  │                  └──────────┬───────────┘
               └─────────┬───────────┘                             │
                         │ gaps                                    ▼
@@ -103,7 +103,9 @@ agent's* choice and to ask about each honestly.
 | `core/decisions` | Record shape, budget, framing, cost check, recording | 0002, 0003 |
 | `core/outcomes` | Skills, learning outcomes, goals, commit scanning, coverage | 0007 |
 | `core/questions` | Model-written questions about real code | 0009 |
-| `core/practice` | Interview sessions, judging | 0005, 0010 |
+| `core/notes` | Line notes and their tradeoff checks | 0010 |
+| `core/profile` | Profile data, static rendering, publishing | 0012 |
+| `core/practice` | Practice feedback, checks, learned status; later interview sessions | 0011, 0013 |
 | `core/llm` | Model providers (your Claude Code, Ollama, API), versioned prompts, `analysis_cache`, caps | 0009 |
 | `core/evidence` | Anchors, re-verification, broken-pointer detection | later |
 | `core/github` | App auth, webhook verification | 0008 |
@@ -140,19 +142,25 @@ violation. Those are the ones to turn into tests when it is cheap to.
 
 **G1 · Single-user value.** A feature in current scope must be worth having with only
 the builder using it. If its value needs a viewer, employer, or second user, it is
-later scope. The doc says so, and it is not built.
+later scope. The doc says so, and it is not built. **One deliberate exception:** the
+shareable profile (0012), the builder's decision of 2026-10-01. It is a published
+snapshot, with no hosting and no second user.
 *Enforced by:* the feature doc's "Why this before anything else". Review.
 
-**G2 · Evidence, not scores.** No per-person score, no streaks, points, badges, or
-counts of technologies known. Where a number appears (rank score, coverage), it
-belongs to a *candidate* or an *answer*, never to the *person*.
+**G2 · Evidence, not scores.** No single score for the person, no streaks, points,
+badges, or counts of technologies known. **Per-goal progress percentages are allowed**
+(builder's decision, 2026-10-01), but only per goal and per project, computed only from
+*learned* outcomes, over the skill's *full* outcome list, and always clickable to the
+evidence behind them. Any other number belongs to a *candidate* or an *answer*, never to
+the *person*.
 *Enforced by:* review. **Proposed test:** a schema test that fails if any table
 keyed on `user_id` alone has a numeric column named like `score|points|streak|level`.
 
 **G3 · Practice and assessment never share a path.** Anything a coaching feature
-produces (explain-back judgements, interview rehearsals, model feedback) cannot become
-evidence or move a skill claim. If the system that coaches the answer also certifies
-it, the certificate is worth nothing.
+produces (practice answers and judge feedback, notes' tradeoff checks, interview
+rehearsals) cannot become evidence, move a skill claim, or count as *learned*. Only a
+**check** counts (0011): a fresh question, no hints, judged once. If the system that
+coaches the answer also certifies it, the certificate is worth nothing.
 *Enforced by:* structure. `evidence_exactly_one_target` allows only decision, learning
 goal or skill claim as targets, and practice tables have no foreign key into
 `evidence` or `skill_claims`. **Must stay true:** a migration adding such a key is
@@ -184,7 +192,7 @@ budgeted. Prompts the product starts always are.
 names what is missing. It does not produce prose for the builder to adopt as their own
 explanation or decision record. "Here is what a strong answer would *cover*" is fine.
 "Here is a strong answer" is not.
-*Enforced by:* prompt rubric (0009, 0010) and review of every prompt change.
+*Enforced by:* prompt rubrics (0009–0011, 0013) and review of every prompt change.
 
 ### Trust
 
@@ -299,10 +307,17 @@ Decisions the spec leaves open go back to the builder.
 | [0004](./features/0004-inherited-settings-detector.md) inherited-settings detector | 1 | proposed, deprioritised | Does reading root-vs-HEAD state find more, and better, questions than history? |
 | [0005](./features/0005-explain-back.md) explain-back | 1 | partly superseded by 0009; the judge remains | Can a model judge an explanation of system-specific code well enough to coach? |
 | [0006](./features/0006-local-web-ui.md) local web UI | 1 | built | Can the builder comfortably take the two-week test? |
-| [0007](./features/0007-project-goals-and-outcomes.md) project goals and learning outcomes | 3 | proposed | Does tracking chosen outcomes in real commits beat asking about past choices? |
-| [0008](./features/0008-github-app.md) GitHub App | 3 | proposed | Can commits be tracked as they are pushed, with GitHub-held timestamps? |
-| [0009](./features/0009-model-questions.md) detailed questions via a connected model | 1, 3 | proposed | Are model-written questions about real code detailed enough to be worth answering? |
-| 0010 interview prep | 2 | not written | Does rehearsing on your own decisions make you better at defending them? |
+| [0007](./features/0007-project-goals-and-outcomes.md) project goals and learning outcomes | 2 | proposed · build 1st | Do chosen outcomes, touched lines and who wrote them give the builder something real to learn from? |
+| [0009](./features/0009-model-questions.md) detailed questions; lists for any skill | 2 | proposed · build 2nd | Are model-written questions about real code detailed enough to be worth answering? |
+| [0010](./features/0010-documenting.md) documenting, with a tradeoff check | 2 | proposed · build 3rd | Does documenting lines, then being shown missed alternatives, make notes better? |
+| [0011](./features/0011-practice-and-check.md) practice and check | 2 | proposed · build 4th | Can a model coach, and separately check, well enough to make "learned" mean something? |
+| [0012](./features/0012-profile.md) shareable profile | 3 | proposed · build 5th | Would the builder send the link, with nothing on it overstated? |
+| [0008](./features/0008-github-app.md) GitHub App | supports 2–3 | proposed · build 6th | Can commits be tracked as they are pushed, with GitHub-held timestamps? |
+| 0013 interview prep | 4 | not written | Does rehearsing on your own decisions make you better at defending them? |
+
+Build-step numbers follow `CLAUDE.md`'s build order as changed on 2026-10-01: 1 capture,
+2 learning goals while building, 3 shareable profile, 4 interview prep, 5 matching. The
+full direction, in the builder's own answers, is [product-direction.md](./product-direction.md).
 
 **Order and gates.**
 
@@ -316,19 +331,15 @@ Decisions the spec leaves open go back to the builder.
   `core/llm`.
 - **0006 local web UI** was added at the builder's request, to test the capture loop in a
   browser. It adds no capability.
-- **Direction change (2026-10-01), at the builder's request:** set learning goals when a
-  project starts, then track them as the code is written. The order is **0007 → 0009 →
-  0008**. 0007 is what everything else attaches to. 0009 fixes the weakness the builder
-  named (questions not detailed enough). 0008 is the most infrastructure for a benefit that
-  only fully pays off once hosted, and 0007 already scans on every app open, so it can come
-  last without blocking anything.
-- **0010 interview prep after 0009**, because it reuses the LLM plumbing and needs
-  enough decisions to rehearse on. It is the first thing anyone would pay for, and it is
-  fourth because without the three before it there is nothing honest to rehearse.
+- **Direction change (2026-10-01), agreed with the builder:** set learning goals when a
+  project starts, and track them as the code is written. Build order **0007 → 0009 → 0010
+  → 0011 → 0012 → 0008**, each usable on its own. 0007 is what everything attaches to.
+  0009 fixes the weakness the builder named (questions not detailed enough). 0010 and 0011
+  are the two halves of *learned* (documented, and explained in a check). 0012 needs them
+  to have anything honest to show. 0008 comes last because the app already scans whenever
+  it's opened.
+- **0013 interview prep after 0012**, reusing the model connection, checks and records.
 
-**Not on this list, on purpose:** the GitHub App and webhook sighting. Under G1 its
-value is mostly to a future viewer, because `pre_registered` only means something to
-someone checking it. But every day without it is retrospective evidence that can never
-be upgraded (0001, "what choosing this costs"). That is a real tension, not a settled
-question. The cheapest hedge is a sighting-only webhook route that writes
-`commit_sightings` and nothing else. It is worth its own small doc once 0002 lands.
+**The GitHub App's honest limit** (0008): while the server runs on the builder's laptop,
+its sighting times are the builder's own clock, not independent proof. GitHub's own push
+times and delivery records are stored so a hosted check can verify them later.

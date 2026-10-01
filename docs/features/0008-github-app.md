@@ -1,10 +1,10 @@
 # 0008 — GitHub App: commits arrive as you push
 
-**Status:** proposed — for review (2026-10-01). The builder chose the GitHub App over local-only tracking
-**Build order:** step 3, supporting 0007 (and the trust ledger `CLAUDE.md` has planned from the start)
+**Status:** proposed (2026-10-01). The builder chose the GitHub App over local-only tracking; agreed to build it **last**, after 0012 (product-direction §7)
+**Build order:** supports steps 2–3. Last of 0007 → 0009 → 0010 → 0011 → 0012 → 0008
 **Writes to the database:** yes — installations, repos, webhook deliveries, commit sightings, jobs
 **Guardrails:** G1, G7, G8, G9, G13, G15 (see [how-it-works](../how-it-works.md#guardrails))
-**Depends on:** [0007](./0007-project-goals-and-outcomes.md) for what to do with a new commit
+**Depends on:** [0007](./0007-project-goals-and-outcomes.md) for what to do with a new commit. Feeds [0012](./0012-profile.md)'s honest labels: GitHub's own push times and delivery records are what a hosted check will need
 
 ---
 
