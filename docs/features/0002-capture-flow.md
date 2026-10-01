@@ -1,6 +1,7 @@
 # 0002 — Capture flow (CLI)
 
-**Status:** in progress — built together with [0003](./0003-authorship.md), whose columns share migration 0002
+**Status:** built (2026-10-01), together with [0003](./0003-authorship.md). Waiting on the real
+`.env` and migrate, then two weeks of use (see "How we will know it worked")
 **Build order:** step 1, tradeoff capture
 **Writes to the database:** yes — first feature that does
 
@@ -215,17 +216,18 @@ Edit freely — ordering reflects dependency, not priority.
 - [x] All writes for one answer in one transaction
 
 **CLI** — `src/cli/`
-- [ ] `npm run ask <path>` — interactive loop over the week's budget
-- [ ] `--manual` for detector-free entry
-- [ ] `--calibration` — dismissals by reason × detector version, plus answer rate
-- [ ] `npm run decisions` — list what has been recorded, with what each is missing
+- [x] `npm run ask <path>` — interactive loop over the week's budget
+- [x] `--manual` for detector-free entry
+- [x] `--calibration` — dismissals by reason × detector version, plus answer rate
+- [x] `npm run decisions` — list what has been recorded, with what each is missing
 
 **Tests**
 - [x] Cost check against the fixture list
 - [x] Candidate mapping round-trip (pure)
-- [ ] Recording against a real database: answer → rows → status, revisions written on
+- [x] Recording against a real database: answer → rows → status, revisions written on
       edit, re-running `ask` does not re-ask
-- [ ] Skips silently without `DATABASE_URL`, like `schema.test.ts`
+- [x] ~~Skips silently without `DATABASE_URL`, like `schema.test.ts`~~ Skips without
+      `TEST_DATABASE_URL`, and fails under `REQUIRE_DB=1` (see Build notes)
 
 **Not deliverables, on purpose:** LLM cost check, skills tagging, explain-back, web UI,
 GitHub App, webhooks, `pre_registered` provenance.
@@ -310,5 +312,13 @@ Recorded as the build goes, rather than by rewriting the plan above.
 - **The cost check's fixtures are synthetic until real answers exist.** They include one
   deliberate known miss: a real, specific cost phrased without a loss construction. It is
   kept so a rule change that fixes it shows up as a diff.
+- **First end-to-end run, scripted, against the test database (2026-10-01).**
+  `frontend-fixer`, with two identities confirmed. All three questions came in the agent
+  frame. A `[k]` with "it's slower" failed both checks, and the revision ("I lost typed
+  route params, so src/App.tsx parses ids by hand") passed both, with the first version
+  kept in `decision_revisions`. A second run said the week's budget was spent. Not yet
+  run by the builder on the real database.
+- **The comparative feedback said "what got worse"**, which is wrong for "lighter". It
+  now says "is a comparison, not something you gave up".
 - **`.env` is loaded by Node itself** (`--env-file-if-exists`, `process.loadEnvFile`),
   not dotenv. One less dependency.

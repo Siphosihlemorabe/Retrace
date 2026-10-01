@@ -6,9 +6,10 @@ cost, and whether you can explain it.
 > **Name not settled.** "Retrace" is the working name, taken from the directory. It is a
 > placeholder, not a decision.
 
-**Status:** the detector runs — `npm run detect <repo>` finds dependency decisions in a
-local clone and writes nothing. Schema and migrations exist and typecheck but have never
-been applied to a database. No server, no webhooks, no capture flow yet.
+**Status:** the capture loop runs locally. `npm run detect <repo>` finds dependency decisions
+in a local clone and says who made each change (you, your agent, a template, someone
+else). `npm run ask <repo>` asks about this week's few and stores decision records,
+learning goals and dismissals in Postgres. No server, no webhooks, no LLM yet.
 
 ---
 
@@ -85,9 +86,10 @@ by design, which is the wrong trade for a codebase built to be understood line b
 │   │   └── middleware/     Session, webhook signature verification, request logging.
 │   ├── worker/             Entry point: drains the jobs table. Same process as
 │   │                       `server` in dev; split out when it hurts.
-│   ├── cli/                Entry point: runs the detector against a local clone and
-│   │                       prints candidates. Writes nothing. This is the fast
-│   │                       feedback loop while the detector is being tuned.
+│   ├── cli/                Entry points for local use. `detect` prints candidates
+│   │                       and writes nothing, which is the fast loop for tuning the
+│   │                       detector. `ask`, `decisions` and `identities` read and write
+│   │                       Postgres.
 │   ├── core/               Everything reusable. No HTTP, no process concerns,
 │   │   │                   no framework imports. If it needs a Request, it belongs
 │   │   │                   in server/ instead.
@@ -158,10 +160,13 @@ npm run db:migrate
 ```sh
 npm run dev          # server + worker, watch mode
 npm run detect <dir> # run the detector against a local clone, print candidates, write nothing
+npm run ask <dir>    # this week's questions; --manual, --calibration, --limit <n>
+npm run decisions    # what you have recorded, and what each record is missing
+npm run identities   # which git identities are yours; --me / --not-me <email> to correct
 npm run db:generate  # generate a migration from schema changes
 npm run db:migrate   # apply pending migrations
 npm run typecheck
-npm test             # schema guarantees; skips silently without DATABASE_URL
+npm test             # needs TEST_DATABASE_URL for DB tests; REQUIRE_DB=1 makes a skip fail
 ```
 
 `npm test` is worth running before anything else touches the database. It doesn't test
@@ -178,7 +183,9 @@ product, it is not current scope.** Say so rather than building it.
 
 1. Tradeoff capture and explain-back ← *here*
    ([0001 — dependency decision detector](./docs/features/0001-dependency-decision-detector.md),
-   [0002 — capture flow](./docs/features/0002-capture-flow.md), proposed)
+   [0002 — capture flow](./docs/features/0002-capture-flow.md) and
+   [0003 — authorship](./docs/features/0003-authorship.md), built; see
+   [how it works](./docs/how-it-works.md) for what comes next)
 2. Interview prep built on that data
 3. Learning goals and progression over time
 4. Public profile / embed

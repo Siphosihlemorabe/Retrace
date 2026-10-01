@@ -1,6 +1,6 @@
 # 0003 — Authorship: who made this change
 
-**Status:** agreed — decision 1 chosen (2026-10-01); building alongside 0002
+**Status:** built (2026-10-01) alongside 0002 (decision 1). Waiting on real use
 **Build order:** step 1, tradeoff capture
 **Writes to the database:** yes — columns on `candidates` and `decisions`, identities
 in `user_git_identities`
@@ -240,12 +240,12 @@ Edit freely — ordering reflects dependency, not priority.
 - [x] Somewhere to remember "this identity is not me" (open question 2)
 
 **Identity setup** — `src/core/decisions/identity.ts` + `src/cli/`
-- [ ] First-run identity prompt, outside the budget, highest commit count first
-- [ ] `npm run identities` lists them and lets one be corrected
+- [x] First-run identity prompt, outside the budget, highest commit count first
+- [x] `npm run identities` lists them and lets one be corrected
 
 **Framing** — `src/core/decisions/` (consumed by 0002's `ask`)
-- [ ] The agent frame and its four answers, mapped as in the table above
-- [ ] `[a]` stores an authorship dispute against `authorship_version` and the
+- [x] The agent frame and its four answers, mapped as in the table above
+- [x] `[a]` stores an authorship dispute against `authorship_version` and the
       introducing SHA. `--calibration` counts disputes alongside dismissals
 
 **Tests**
@@ -255,7 +255,7 @@ Edit freely — ordering reflects dependency, not priority.
 - [x] Regression: the agent swap still surfaces (it must not be filtered out), framed as
       `agent`
 - [x] Commit position is unaffected by rewriting commit dates
-- [ ] Copy check on the agent frame: no "you chose", no counts of agent commits (G4, G5)
+- [x] Copy check on the agent frame: no "you chose", no counts of agent commits (G4, G5)
 
 **Not deliverables, on purpose:** any model-based guess at AI involvement, per-person
 AI-usage statistics, `github_verified` identities, team attribution, asking about
@@ -300,6 +300,8 @@ after building interview prep on top of decision records that don't exist.
 - **Unrecognised `[bot]` identities reach the identity question**, and answering "someone
   else" files them as `other_human`. Acceptable for v1; a third answer ("a bot") is the
   fix if it comes up.
+- **Identity setup has a third answer, `[l]` ask me later.** It is not in the spec. Without
+  it, the only way past an identity you don't recognise is to guess.
 - **Vocabulary drift is now tested.** A test reads the CHECK constraints from the
   migration files and compares them with `AUTHORSHIP_CLASSES` and the detector's kinds,
   closing the gap 0001's follow-up left open.

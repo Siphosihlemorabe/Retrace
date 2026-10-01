@@ -257,28 +257,21 @@ section recording it (see 0001's "First run") rather than silently rewriting the
 
 ## Current feature
 
-**Building: [0002 — Capture flow (CLI)](./docs/features/0002-capture-flow.md) together
-with [0003 — Authorship](./docs/features/0003-authorship.md).** 0003 decision 1 was
-chosen: its columns go into migration 0002, and `npm run ask` is built once, using
-0003's framing. Order:
+**Built: [0002 — Capture flow](./docs/features/0002-capture-flow.md) with
+[0003 — Authorship](./docs/features/0003-authorship.md)** (2026-10-01). The detector says who
+made each change, and `npm run ask` asks about this week's few, framed by that, and stores
+what comes back. Verified against a throwaway test database, not yet the builder's own.
 
-1. `.env` and the first real migrate of 0000 + 0001; DB tests fail on skip under
-   `REQUIRE_DB=1` (G20)
-2. Migration 0002: `repos.source` (0002) + authorship and commit-position columns,
-   `decisions.role`, other-identities table (0003)
-3. Local identity: builder user row from env, local clone as a repo, identity setup
-4. Authorship classification in the detector; `DETECTOR_VERSION = 2`
-5. Candidate persistence with upsert on the dedupe key
-6. Weekly ask budget
-7. Rule-based cost check (`COST_CHECK_VERSION`), no LLM
-8. Recording decisions / learning goals / dismissals, with revisions, transactional
-9. CLI: `npm run ask` (framed by authorship), `--manual`, `--calibration`,
-   `npm run decisions`, `npm run identities`
+**Next, before any new feature:** the builder's real `.env` (`DATABASE_URL`,
+`TEST_DATABASE_URL`, `RETRACE_GITHUB_USER_ID`, `RETRACE_GITHUB_LOGIN`), `npm run db:migrate`,
+then two weeks of `npm run ask` on real repos. 0002's and 0003's "How we will know it
+worked" sections say what to read at the end. The cost check's fixtures become real answers
+then.
 
-The feature docs are the source of truth for the checklists; this is a summary.
+Proposed after that: [0004](./docs/features/0004-inherited-settings-detector.md),
+[0005](./docs/features/0005-explain-back.md). See [how-it-works](./docs/how-it-works.md#roadmap-against-the-build-order).
 
 Previous: [0001 — Dependency decision detector](./docs/features/0001-dependency-decision-detector.md) — built, with its follow-up.
-Proposed next: [0004](./docs/features/0004-inherited-settings-detector.md), [0005](./docs/features/0005-explain-back.md) — see [how-it-works](./docs/how-it-works.md#roadmap-against-the-build-order).
 
 ## Open questions
 

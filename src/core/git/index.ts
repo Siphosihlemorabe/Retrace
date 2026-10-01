@@ -294,3 +294,9 @@ export async function currentBranch(repo: Repo): Promise<string> {
   const out = await gitAllowFail(repo, ['symbolic-ref', '--short', 'HEAD']);
   return out.trim() === '' ? 'HEAD' : out.trim();
 }
+
+/** Tracked paths at HEAD — what the cost check can recognise as "this repo". */
+export async function trackedFiles(repo: Repo): Promise<string[]> {
+  const out = await git(repo, ['ls-tree', '-r', '--name-only', 'HEAD']);
+  return out.split('\n').map((s) => s.trim()).filter((s) => s !== '');
+}

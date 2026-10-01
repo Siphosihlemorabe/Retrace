@@ -92,7 +92,7 @@ agent's* choice and to ask about each honestly.
 
 | Entry point | What it does | Exists |
 |---|---|---|
-| `src/cli/` | The fast loop: detect, ask, practice, against a local clone | detect only |
+| `src/cli/` | The fast loop: detect, ask, practice, against a local clone | detect, ask |
 | `src/server/` | Webhook receiver, API, static web app | no |
 | `src/worker/` | Drains `jobs`: backfill, deferred analysis | no |
 
@@ -281,7 +281,9 @@ Decisions the spec leaves open go back to the builder.
 
 | Enforced by the database or a test today | Review only (candidates for a test) | Not yet enforced |
 |---|---|---|
-| G3 (structure), G8 (data), G13 (columns), G21 | G1, G2, G5, G7, G8 (usage), G11, G18, G19 | G4, G6, G10 (direct update), G12, G14, G15, G16, G20 |
+| G3 (structure), G4 (framing tests, `decisions.role` trigger), G5 (copy tests on the ask frames), G6 (budget), G8 (data; commit position replaces dates), G12 (identity sets), G13 (columns), G14 (dismissals, `[a]` disputes), G20 (`REQUIRE_DB=1`), G21 | G1, G2, G7, G8 (usage), G11, G18, G19 | G10 (direct update), G15, G16 |
+
+*Updated 2026-10-01, after 0002 and 0003 were built.*
 
 ---
 
@@ -290,8 +292,8 @@ Decisions the spec leaves open go back to the builder.
 | Doc | Build step | Status | Main risk it tests |
 |---|---|---|---|
 | [0001](./features/0001-dependency-decision-detector.md) dependency detector | 1 | built | Are there real decisions in history? *Thin, and mostly agent-made.* |
-| [0002](./features/0002-capture-flow.md) capture flow | 1 | agreed | Will the builder answer, and does the cost check bite? |
-| [0003](./features/0003-authorship.md) authorship: who made this change | 1 | proposed | Can we tell the builder's choice from their agent's, cheaply and honestly? |
+| [0002](./features/0002-capture-flow.md) capture flow | 1 | built | Will the builder answer, and does the cost check bite? |
+| [0003](./features/0003-authorship.md) authorship: who made this change | 1 | built | Can we tell the builder's choice from their agent's, cheaply and honestly? |
 | [0004](./features/0004-inherited-settings-detector.md) inherited-settings detector | 1 | proposed | Does reading root-vs-HEAD state find more, and better, questions than history? |
 | [0005](./features/0005-explain-back.md) explain-back | 1 | proposed | Can a model judge an explanation of system-specific code well enough to coach? |
 | 0006 interview prep | 2 | not written | Does rehearsing on your own decisions make you better at defending them? |

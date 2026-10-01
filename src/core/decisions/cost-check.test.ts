@@ -108,7 +108,7 @@ describe('feedback', () => {
   test('a comparative is called out by name, with the question that fixes it', () => {
     const [first] = checkCost("it's slower", ctx).feedback;
     expect(first).toBe(
-      '“slower” says what got worse, not what you gave up. What did react-router-dom stop you doing that @tanstack/react-router let you do?',
+      '“slower” is a comparison, not something you gave up. What did react-router-dom stop you doing that @tanstack/react-router let you do?',
     );
   });
 

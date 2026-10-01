@@ -60,7 +60,7 @@ const LOSS = new RegExp(
   'i',
 );
 
-/** "Worse" words. On their own they say what got worse, not what was lost. */
+/** Comparisons. On their own they say how it compares, not what was lost. */
 const COMPARATIVE = new Set([
   'slower', 'faster', 'heavier', 'lighter', 'bigger', 'larger', 'smaller',
   'harder', 'easier', 'simpler', 'complex', 'complicated', 'verbose',
@@ -140,7 +140,7 @@ export function checkCost(text: string | null, ctx: CostContext): CostVerdict {
       : `What did ${ctx.choice} stop you doing that ${ctx.alternative} let you do?`;
     feedback.push(
       loss.comparativeOnly !== null
-        ? `“${loss.comparativeOnly}” says what got worse, not what you gave up. ${what}`
+        ? `“${loss.comparativeOnly}” is a comparison, not something you gave up. ${what}`
         : `This says what ${ctx.choice} is like, not what it cost. ${what}`,
     );
   }
