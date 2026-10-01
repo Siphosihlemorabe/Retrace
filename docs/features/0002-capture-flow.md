@@ -273,3 +273,17 @@ enough to tune weights or trust percentages. Treat the numbers as directions.
 Interview prep (build step 2) needs stored decisions with named costs — this is the
 first thing that produces them. And the calibration output is what the second detector
 signal should be designed against.
+
+---
+
+## Build notes
+
+Recorded as the build goes, rather than by rewriting the plan above.
+
+- **Tests use `TEST_DATABASE_URL`, not `DATABASE_URL`** (2026-10-01). The spec said
+  "skips silently without `DATABASE_URL`". But these tests seed a builder user and write
+  decisions, so pointed at the real database they would mix fixture rows into real ones.
+  A vitest global setup migrates the test database before every run, and `REQUIRE_DB=1`
+  turns a skip into a failure (G20).
+- **`.env` is loaded by Node itself** (`--env-file-if-exists`, `process.loadEnvFile`),
+  not dotenv. One less dependency.

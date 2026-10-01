@@ -2,16 +2,18 @@
  * Proves the guarantees the schema is supposed to make, rather than the columns
  * it happens to have. Each test maps to a claim the product makes to a user.
  *
- * Needs a live database:  DATABASE_URL=... npm test
+ * Needs a live database:  TEST_DATABASE_URL=... npm test (migrated by test-setup.ts)
  */
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
-const connectionString = process.env['DATABASE_URL'];
+import { skipWithoutDatabase, testDatabaseUrl } from './testing.js';
+
+const connectionString = testDatabaseUrl;
 
 const db = connectionString ? new pg.Pool({ connectionString }) : null;
 const q = async (text: string, values: unknown[] = []) => {
-  if (!db) throw new Error('DATABASE_URL not set');
+  if (!db) throw new Error('TEST_DATABASE_URL not set');
   return db.query(text, values);
 };
 
@@ -25,7 +27,7 @@ const mustFail = async (text: string, values: unknown[] = []) => {
   throw new Error(`expected failure, but the statement succeeded: ${text}`);
 };
 
-describe.skipIf(!connectionString)('schema guarantees', () => {
+describe.skipIf(skipWithoutDatabase())('schema guarantees', () => {
   let userId: string;
   let repoId: string;
 
