@@ -124,6 +124,8 @@ export interface CoverageResponse {
     declaredAtSha: string | null;
     declaredAt: string;
     hasOutcomeList: boolean;
+    /** Drafted by a model and reviewed: its coverage is found by the model too. */
+    modelList: boolean;
     total: number;
     learned: number;
     percentLearned: number | null;

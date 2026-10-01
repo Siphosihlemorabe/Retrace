@@ -1,5 +1,5 @@
 /**
- * Four tabs, no router: the capture loop is one screen at a time, and a
+ * A handful of tabs, no router: the capture loop is one screen at a time, and a
  * router library would be the first dependency 0006 said not to add.
  */
 import { useCallback, useEffect, useState } from 'react';
@@ -10,8 +10,9 @@ import { CalibrationPage } from './pages/Calibration.js';
 import { DecisionsPage } from './pages/Decisions.js';
 import { GoalsPage } from './pages/Goals.js';
 import { ReposPage } from './pages/Repos.js';
+import { SettingsPage } from './pages/Settings.js';
 
-type Tab = 'goals' | 'ask' | 'decisions' | 'calibration' | 'repos';
+type Tab = 'goals' | 'ask' | 'decisions' | 'calibration' | 'repos' | 'settings';
 const TABS: { id: Tab; label: string; title: string; subtitle: string }[] = [
   {
     id: 'goals',
@@ -42,6 +43,12 @@ const TABS: { id: Tab; label: string; title: string; subtitle: string }[] = [
     label: 'Projects',
     title: 'Projects',
     subtitle: 'Start a new project or add one you have. Everything stays on this computer.',
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    title: 'Settings',
+    subtitle: 'The model that writes your questions, and how many you get a week.',
   },
 ];
 
@@ -147,6 +154,8 @@ export function App() {
           <DecisionsPage />
         ) : tab === 'calibration' ? (
           <CalibrationPage />
+        ) : tab === 'settings' ? (
+          <SettingsPage />
         ) : (
           <ReposPage
             repos={repos}

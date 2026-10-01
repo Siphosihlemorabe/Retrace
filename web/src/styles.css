@@ -883,6 +883,60 @@ td {
   border-bottom: none;
 }
 
+/* --- 0009: questions, settings, outcome lists ------------------------------ */
+
+.notice {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: var(--accent-soft);
+  box-shadow: none;
+}
+.notice h3 {
+  margin-top: 0;
+}
+.code.excerpt {
+  max-height: 340px;
+  margin: 10px 0 4px;
+}
+.code.excerpt .ln {
+  color: var(--code-muted);
+  user-select: none;
+}
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 18px;
+  margin: 12px 0;
+}
+.facts dt {
+  color: var(--muted);
+}
+.facts dd {
+  margin: 0;
+}
+input.narrow {
+  width: 88px;
+}
+.review {
+  margin-top: 14px;
+}
+.review-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+  display: grid;
+  gap: 8px;
+}
+.review-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(200px, 2fr) minmax(140px, 1.2fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.review-row input {
+  width: 100%;
+  min-width: 0;
+}
+
 /* --- Small screens --------------------------------------------------------- */
 
 @media (max-width: 720px) {
@@ -906,6 +960,12 @@ td {
   }
   .shell {
     padding: 20px 14px 48px;
+  }
+  .review-row {
+    grid-template-columns: 1fr auto;
+  }
+  .review-row input:not(:first-child) {
+    grid-column: 1;
   }
 }
 

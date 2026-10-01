@@ -9,30 +9,13 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { api, type CodeViewResponse, type CoverageResponse, type RepoView, type SkillView } from '../api.js';
+import { SHORT, WHO } from '../labels.js';
 import { IdentityStep, type Identity } from './Ask.js';
 
 type Goal = CoverageResponse['goals'][number];
 type Outcome = Goal['outcomes'][number];
 type Sighting = Outcome['sightings'][number];
 
-const WHO: Record<string, string> = {
-  builder: 'you',
-  builder_with_agent: 'you, with an agent',
-  agent: 'your agent',
-  template: 'template',
-  automation: 'automated',
-  other_human: 'someone else',
-  unknown: 'author not confirmed',
-};
-const SHORT: Record<string, string> = {
-  builder: 'you',
-  builder_with_agent: 'you+AI',
-  agent: 'agent',
-  template: 'tmpl',
-  automation: 'bot',
-  other_human: 'other',
-  unknown: '?',
-};
 const STATUS: Record<Outcome['status'], string> = {
   learned: 'learned',
   documented: 'documented',
@@ -200,9 +183,10 @@ function GoalCard(props: { repoId: string; goal: Goal; positions: Record<string,
           <div className="skill-icon">{goal.skill.name.slice(0, 2)}</div>
           <div>
             <h2>{goal.skill.name}</h2>
-            <p className="muted">Its outcome list will be drafted for you to review (coming in 0009).</p>
+            <p className="muted">There is no built-in list of what {goal.skill.name} breaks into. Draft one and review it.</p>
           </div>
         </div>
+        <OutcomeListReview skill={goal.skill} onSaved={props.onRelabelled} />
       </section>
     );
   }
@@ -249,6 +233,7 @@ function GoalCard(props: { repoId: string; goal: Goal; positions: Record<string,
               to document and explain {goal.touched - goal.learned === 1 ? 'it' : 'them'}.
             </p>
           )}
+          {goal.modelList && <ModelScan repoId={repoId} skill={goal.skill.slug} onFound={props.onRelabelled} />}
         </div>
       </div>
 
@@ -285,6 +270,7 @@ function GoalCard(props: { repoId: string; goal: Goal; positions: Record<string,
                       {WHO[best.authorship] ?? best.authorship}
                     </span>
                     {best.when === 'before_goal' && <span className="tag">before the goal</span>}
+                    {best.foundBy === 'model' && <span className="tag">found by the model</span>}
                     {best.via === 'orm' && <span className="tag">via an ORM</span>}
                     <span className="mono path">
                       {best.path}:{best.lineStart}
@@ -437,6 +423,159 @@ function GoalsEditor(props: { repoId: string; existing: Goal[]; onCancel: (() =>
 }
 
 // ---------------------------------------------------------------------------
+
+// --- 0009: outcome lists for any skill ----------------------------------------
+
+type Row = { name: string; description: string; cues: string };
+const BLANK: Row = { name: '', description: '', cues: '' };
+const cuesOf = (row: Row) =>
+  row.cues
+    .split(',')
+    .map((c) => c.trim())
+    .filter((c) => c !== '');
+const rowOk = (row: Row) => row.name.trim().length >= 2 && row.description.trim().length >= 5 && cuesOf(row).length > 0;
+
+/** Draft, edit, save. Nothing is used until the builder saves it. */
+function OutcomeListReview(props: { skill: { slug: string; name: string }; onSaved: () => void }) {
+  const [rows, setRows] = useState<Row[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const draft = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await api.draftOutcomes(props.skill.slug);
+      if (r.outcomes === null) setError(r.message ?? 'No model could draft a list.');
+      else setRows(r.outcomes.map((o) => ({ name: o.name, description: o.description, cues: o.lookFor.join(', ') })));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const save = async () => {
+    if (rows === null) return;
+    setError(null);
+    try {
+      await api.saveOutcomes(
+        props.skill.slug,
+        rows.map((r) => ({ name: r.name.trim(), description: r.description.trim(), lookFor: cuesOf(r) })),
+      );
+      props.onSaved();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const edit = (i: number, patch: Partial<Row>) => setRows((rs) => rs?.map((r, j) => (j === i ? { ...r, ...patch } : r)) ?? null);
+
+  if (rows === null) {
+    return (
+      <div className="actions">
+        <button className="primary" disabled={busy} onClick={() => void draft()}>
+          {busy ? 'Drafting…' : 'Draft a list with the model'}
+        </button>
+        <button onClick={() => setRows([{ ...BLANK }])}>Write my own</button>
+        {error !== null && <p className="error">{error}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="review">
+      <p className="muted small">
+        Edit anything, remove what doesn’t belong, add what’s missing. “Look for” is text that appears in code when
+        the outcome is touched, separated by commas. Only files containing it are read by the model.
+      </p>
+      <ul className="review-list">
+        {rows.map((r, i) => (
+          <li key={i} className="review-row">
+            <input aria-label="Outcome" placeholder="Outcome" value={r.name} onChange={(e) => edit(i, { name: e.target.value })} />
+            <input
+              aria-label="What doing it well looks like"
+              placeholder="What doing it well looks like"
+              value={r.description}
+              onChange={(e) => edit(i, { description: e.target.value })}
+            />
+            <input
+              aria-label="Look for in code"
+              className="mono"
+              placeholder="look for, in, code"
+              value={r.cues}
+              onChange={(e) => edit(i, { cues: e.target.value })}
+            />
+            <button className="quiet" aria-label={`Remove ${r.name || 'this outcome'}`} onClick={() => setRows(rows.filter((_, j) => j !== i))}>
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="actions">
+        <button onClick={() => setRows([...rows, { ...BLANK }])}>Add an outcome</button>
+        <button className="primary" disabled={rows.length === 0 || !rows.every(rowOk)} onClick={() => void save()}>
+          Use this list
+        </button>
+        <button className="quiet" onClick={() => setRows(null)}>
+          Cancel
+        </button>
+      </div>
+      {error !== null && <p className="error">{error}</p>}
+    </div>
+  );
+}
+
+/** The model reads files the list's cues point at. Asks for consent first if code would leave the computer. */
+function ModelScan(props: { repoId: string; skill: string; onFound: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [needsConsent, setNeedsConsent] = useState(false);
+
+  const run = async () => {
+    setBusy(true);
+    setNote(null);
+    try {
+      const r = await api.modelScan(props.repoId, props.skill);
+      if (!r.ok) {
+        setNeedsConsent(r.reason === 'no_consent');
+        setNote(r.message);
+        return;
+      }
+      setNeedsConsent(false);
+      setNote(
+        `Read ${r.read} file${r.read === 1 ? '' : 's'}${r.cached > 0 ? ` (${r.cached} unchanged, not read again)` : ''}; found ${r.sightings} new place${r.sightings === 1 ? '' : 's'}.` +
+          (r.stopped === 'run_limit' ? ' More files to read: run it again.' : r.stopped === 'capped' ? ' Today’s model calls are used up.' : ''),
+      );
+      if (r.sightings > 0) props.onFound();
+    } catch (e) {
+      setNote((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="actions">
+      <button className="btn-secondary" disabled={busy} onClick={() => void run()}>
+        {busy ? 'Reading…' : 'Find code with the model'}
+      </button>
+      {needsConsent && (
+        <button
+          onClick={() =>
+            void api.allowModel(props.repoId).then(
+              () => void run(),
+              (e: Error) => setNote(e.message),
+            )
+          }
+        >
+          Allow for this project
+        </button>
+      )}
+      {note !== null && <span className="muted small">{note}</span>}
+    </div>
+  );
+}
 
 function CodeView(props: {
   repoId: string;

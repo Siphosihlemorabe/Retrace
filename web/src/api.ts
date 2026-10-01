@@ -8,6 +8,12 @@ import type {
   CalibrationResponse,
   CodeViewResponse,
   CoverageResponse,
+  DraftOutcomesResponse,
+  LlmStatusResponse,
+  ModelScanResponse,
+  SavedOutcomesResponse,
+  SkipResponse,
+  WeekResponse,
   GithubReadyResponse,
   LabelResponse,
   ScanResponse,
@@ -37,6 +43,7 @@ async function request<T>(path: string, init?: { method?: string; body?: unknown
 }
 
 const post = <T>(path: string, body: unknown = {}) => request<T>(path, { method: 'POST', body });
+const put = <T>(path: string, body: unknown) => request<T>(path, { method: 'PUT', body });
 
 export const api = {
   me: () => request<MeResponse>('/api/me'),
@@ -70,6 +77,19 @@ export const api = {
     request<CodeViewResponse>(`/api/repos/${repoId}/code?sha=${sha}&path=${encodeURIComponent(path)}`),
   label: (repoId: string, body: { sha: string; path: string; lineStart: number; lineEnd: number; label: 'agent' | 'me' }) =>
     post<LabelResponse>(`/api/repos/${repoId}/labels`, body),
+
+  // 0009
+  llm: () => request<LlmStatusResponse>('/api/llm'),
+  setQuestionsPerWeek: (n: number) => put<{ questionsPerWeek: number }>('/api/settings', { questionsPerWeek: n }),
+  allowModel: (repoId: string) => post<{ ok: true }>(`/api/repos/${repoId}/llm-consent`),
+  week: (repoId: string) => request<WeekResponse>(`/api/repos/${repoId}/week`),
+  questionShown: (id: string) => post<{ ok: true }>(`/api/questions/${id}/shown`),
+  practice: (id: string, answer: string) => post<{ ok: true }>(`/api/questions/${id}/answer`, { answer }),
+  skipQuestion: (id: string) => post<SkipResponse>(`/api/questions/${id}/skip`),
+  draftOutcomes: (skill: string) => post<DraftOutcomesResponse>(`/api/skills/${encodeURIComponent(skill)}/draft`),
+  saveOutcomes: (skill: string, outcomes: { name: string; description: string; lookFor: string[]; slug?: string }[]) =>
+    put<SavedOutcomesResponse>(`/api/skills/${encodeURIComponent(skill)}/outcomes`, { outcomes }),
+  modelScan: (repoId: string, skill: string) => post<ModelScanResponse>(`/api/repos/${repoId}/model-scan`, { skill }),
 };
 
 export type * from '../../src/server/api-types.js';
