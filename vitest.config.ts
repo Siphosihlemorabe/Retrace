@@ -11,5 +11,9 @@ try {
 export default defineConfig({
   test: {
     globalSetup: ['./src/db/test-setup.ts'],
+    // Many tests build fixture repos and shell out to git; on Windows, with
+    // every file running in parallel, one can pass 5s without being wrong.
+    testTimeout: 30_000,
+    hookTimeout: 60_000,
   },
 });

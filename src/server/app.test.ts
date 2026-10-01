@@ -24,7 +24,8 @@ import type {
 import { createApp } from './app.js';
 
 const AGENT = { name: 'gpt-engineer-app[bot]', email: '159125892+gpt-engineer-app[bot]@users.noreply.github.com' };
-const ME = { name: 'Me', email: 'me@example.com' };
+// Unique to this file: identity emails are globally unique, and test files run in parallel.
+const ME = { name: 'Me', email: 'api-test-me@example.com' };
 const pkg = (deps: Record<string, string>) => JSON.stringify({ name: 'f', dependencies: deps }, null, 2);
 
 describe.skipIf(skipWithoutDatabase())('local API', () => {
