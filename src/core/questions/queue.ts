@@ -297,7 +297,14 @@ export async function skipQuestion(db: Db, userId: string, questionId: string): 
 
 /** Consent, once per repo, before code goes to a model off this machine. */
 export async function allowModelForRepo(db: Db, repoId: string): Promise<void> {
-  await db.update(repos).set({ llmAllowedAt: new Date() }).where(and(eq(repos.id, repoId), isNull(repos.llmAllowedAt)));
+  await db.transaction(async (tx) => {
+    await tx.update(repos).set({ llmAllowedAt: new Date() }).where(and(eq(repos.id, repoId), isNull(repos.llmAllowedAt)));
+    // Questions written without the model and never shown have no answers and
+    // no reader yet: drop them, so the next ones are written by the model.
+    await tx
+      .delete(questions)
+      .where(and(eq(questions.repoId, repoId), eq(questions.foundBy, 'rule'), eq(questions.status, 'pending'), isNull(questions.shownAt)));
+  });
 }
 
 export async function modelAllowed(db: Db, repoId: string): Promise<boolean> {

@@ -10,7 +10,7 @@
  *
  * There is no number for the person, only for a goal in a project (G2).
  */
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import {
   learningGoalOutcomes,
@@ -53,6 +53,8 @@ export interface GoalCoverage {
   declaredAt: Date;
   /** False for skills whose list is drafted by a model (0009); nothing to show yet. */
   hasOutcomeList: boolean;
+  /** The list was drafted by a model and reviewed by the builder: its coverage is found by the model too. */
+  modelList: boolean;
   total: number;
   learned: number;
   /** Whole percent of the full list, or null when there is no list. */
@@ -90,6 +92,7 @@ export function computeCoverage(input: {
   sightings: ReadonlyMap<string, readonly SightingView[]>;
   documented: ReadonlySet<string>;
   learned: ReadonlySet<string>;
+  modelList?: boolean;
 }): GoalCoverage {
   const outcomes: OutcomeCoverage[] = input.outcomes.map((o) => {
     const sightings = rankSightings(input.sightings.get(o.slug) ?? []);
@@ -112,6 +115,7 @@ export function computeCoverage(input: {
     declaredAtSha: input.declaredAtSha,
     declaredAt: input.declaredAt,
     hasOutcomeList: total > 0,
+    modelList: input.modelList ?? false,
     total,
     learned,
     percentLearned: total === 0 ? null : Math.round((learned / total) * 100),
@@ -147,10 +151,12 @@ export async function loadCoverage(db: Db, userId: string, repoId: string): Prom
       description: skillOutcomes.description,
       ordinal: skillOutcomes.ordinal,
       inObjective: learningGoalOutcomes.inObjective,
+      source: skillOutcomes.source,
     })
     .from(learningGoalOutcomes)
     .innerJoin(skillOutcomes, eq(skillOutcomes.id, learningGoalOutcomes.outcomeId))
-    .where(inArray(learningGoalOutcomes.goalId, goals.map((g) => g.id)))
+    // A retired outcome is no longer on the list, so it is not in the denominator either.
+    .where(and(inArray(learningGoalOutcomes.goalId, goals.map((g) => g.id)), isNull(skillOutcomes.retiredAt)))
     .orderBy(skillOutcomes.ordinal);
 
   const sightingRows = await db
@@ -196,6 +202,7 @@ export async function loadCoverage(db: Db, userId: string, repoId: string): Prom
       declaredAtSha: g.declaredAtSha,
       declaredAt: g.declaredAt,
       outcomes: outcomeRows.filter((o) => o.goalId === g.id),
+      modelList: outcomeRows.some((o) => o.goalId === g.id && o.source !== 'builtin'),
       sightings,
       // Documenting (0010) and checks (0011) are not built: nothing is
       // documented or learned yet, and the percentage says so honestly.

@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
-import { practiceAnswers, repos, users } from '../../db/schema.js';
+import { practiceAnswers, questions, repos, users } from '../../db/schema.js';
 import { openTestDb, skipWithoutDatabase } from '../../db/testing.js';
 import type { Db } from '../../db/types.js';
 import { createFixtureRepo, type FixtureRepo } from '../../test/fixture-repo.js';
@@ -132,6 +132,18 @@ describe.skipIf(skipWithoutDatabase())('the question queue', () => {
     const left = await nextQuestions(scope, null);
     expect(left.map((q) => q.id)).not.toContain(second!.id);
     expect(left.every((q) => q.outcomeId !== second!.outcomeId)).toBe(true);
+  });
+
+  test('allowing the model drops unshown questions written without it, and keeps the rest', async () => {
+    const before = await nextQuestions(scope, null);
+    const unshown = before.filter((q) => q.shownAt === null);
+    expect(unshown.length).toBeGreaterThan(0);
+    await allowModelForRepo(db, scope.repoId);
+    const left = await db.select().from(questions).where(eq(questions.repoId, scope.repoId));
+    for (const q of unshown) expect(left.find((l) => l.id === q.id)).toBeUndefined();
+    // Answered and expired questions, and anything shown, stay.
+    expect(left.some((q) => q.status === 'answered')).toBe(true);
+    expect(left.some((q) => q.status === 'expired')).toBe(true);
   });
 
   test('the weekly number has a floor of three', async () => {

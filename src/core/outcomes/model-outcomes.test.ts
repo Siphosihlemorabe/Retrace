@@ -125,7 +125,11 @@ describe.skipIf(skipWithoutDatabase())('outcome lists for any skill', () => {
     // Saving again with one removed retires it and ticks nothing new.
     const again = await saveOutcomeList(db, skillId, reviewed.filter((o) => o.name !== 'Transactions'));
     expect(again).toMatchObject({ added: 0, retired: 1 });
+    // A retired outcome leaves the denominator too.
+    const [cov1] = await loadCoverage(db, scope.userId, scope.repoId);
+    expect(cov1).toMatchObject({ total: 4, modelList: true });
     await saveOutcomeList(db, skillId, reviewed);
+    expect((await loadCoverage(db, scope.userId, scope.repoId))[0]?.total).toBe(5);
   });
 
   test('no code leaves the machine before consent', async () => {
