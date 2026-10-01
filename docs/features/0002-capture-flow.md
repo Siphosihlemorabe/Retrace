@@ -180,7 +180,7 @@ so this is not invented, and sign-in later finds the existing row.
 Edit freely — ordering reflects dependency, not priority.
 
 **Schema** — `migrations/0002_*.sql`, `src/db/schema.ts`
-- [ ] `repos.source` with the conditional-nullable CHECK (or whichever option is chosen)
+- [x] `repos.source` with the conditional-nullable CHECK (or whichever option is chosen)
 - Detector kinds vs. `candidates_kind`, and the first real migrate — **moved to 0001's
   follow-up**, which also fixes the broken CHECK constraints in 0000. Must land first.
 

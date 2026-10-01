@@ -15,6 +15,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -85,6 +86,29 @@ export const userGitIdentities = pgTable(
   ],
 );
 
+/**
+ * Author identities this user has said are *not* them (0003, "[o] Someone
+ * else"), so the identity question is never asked twice.
+ *
+ * A table rather than a column on `user_git_identities`: that table's rows mean
+ * "this email is this user", and a not-me row has no user to point at. Keyed
+ * per user because "not me" is one person's statement, and it is the first
+ * shape team attribution will need.
+ */
+export const knownOtherIdentities = pgTable(
+  'known_other_identities',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    email: citext('email').notNull(),
+    name: text('name'),
+    createdAt: createdAt(),
+  },
+  (t) => [unique('known_other_identities_unq').on(t.userId, t.email)],
+);
+
 export const installations = pgTable('installations', {
   id: id(),
   githubInstallationId: bigint('github_installation_id', { mode: 'number' })
@@ -106,14 +130,32 @@ export const repos = pgTable(
   'repos',
   {
     id: id(),
-    installationId: uuid('installation_id')
-      .notNull()
-      .references(() => installations.id, { onDelete: 'cascade' }),
-    githubRepoId: bigint('github_repo_id', { mode: 'number' }).notNull().unique(),
-    owner: text('owner').notNull(),
+
+    /**
+     * Where this repo's data came from. A local clone has no installation and
+     * no GitHub id, and inventing them would be a lie in the one product whose
+     * claim is telling verified from asserted (0002, "local repos in a
+     * GitHub-shaped schema"). The GitHub columns are nullable only for local
+     * clones — see `repos_github_fields` below.
+     */
+    source: text('source').notNull().default('github'),
+
+    installationId: uuid('installation_id').references(() => installations.id, {
+      onDelete: 'cascade',
+    }),
+    githubRepoId: bigint('github_repo_id', { mode: 'number' }).unique(),
+    owner: text('owner'),
     name: text('name').notNull(),
-    isPrivate: boolean('is_private').notNull(),
+    isPrivate: boolean('is_private'),
     defaultBranch: text('default_branch').notNull(),
+
+    /**
+     * Local clones are identified by absolute path + root commit SHA. The path
+     * alone breaks when two directories hold different repos over time; the
+     * root SHA alone merges two clones of one repo that may have diverged.
+     */
+    localPath: text('local_path'),
+    rootSha: char('root_sha', { length: 40 }),
 
     /**
      * Server clock, set once. The boundary of the trust claim: anything whose
@@ -133,6 +175,25 @@ export const repos = pgTable(
       'repos_backfill_status',
       oneOf(t.backfillStatus, ['pending', 'running', 'complete', 'failed']),
     ),
+    check('repos_source', oneOf(t.source, ['github', 'local_clone'])),
+    check(
+      'repos_github_fields',
+      sql`${t.source} <> 'github' OR (
+        ${t.installationId} IS NOT NULL
+        AND ${t.githubRepoId} IS NOT NULL
+        AND ${t.owner} IS NOT NULL
+        AND ${t.isPrivate} IS NOT NULL
+      )`,
+    ),
+    check(
+      'repos_local_clone_fields',
+      sql`${t.source} <> 'local_clone' OR (
+        ${t.localPath} IS NOT NULL AND ${t.rootSha} IS NOT NULL
+      )`,
+    ),
+    uniqueIndex('repos_local_clone_unq')
+      .on(t.localPath, t.rootSha)
+      .where(sql`source = 'local_clone'`),
   ],
 );
 
@@ -263,9 +324,34 @@ export const candidates = pgTable(
      * Promoted out of `signals` because ranking reads them on every query.
      */
     filesInIntroducingCommit: integer('files_in_introducing_commit'),
+    /**
+     * No longer written (0003). Derived from git dates, which are fiction in
+     * practice — every Lovable root commit is dated 2025-01-01. Kept only
+     * because 0000 is treated as applied; replaced by the commit position below.
+     */
     projectAgeDaysAtIntroduction: integer('project_age_days_at_introduction'),
     introducedAlone: boolean('introduced_alone'),
     looksScaffoldGenerated: boolean('looks_scaffold_generated'),
+
+    /** "Commit 5 of 482": topological position, immune to rewritten dates. */
+    commitIndexAtIntroduction: integer('commit_index_at_introduction'),
+    commitCountAtDetection: integer('commit_count_at_detection'),
+
+    /**
+     * Who made the change (0003). Decides how the question is framed: nobody
+     * is asked to defend a choice their agent or template made as if it were
+     * theirs (G4). A judgement, so it carries the version that made it.
+     */
+    introducedBy: text('introduced_by').notNull(),
+    introducingAuthorEmail: citext('introducing_author_email'),
+    authorshipVersion: integer('authorship_version').notNull(),
+    /** Set when the builder answers "[a] I asked for it" to an agent frame. */
+    authorshipDisputedAt: timestamp('authorship_disputed_at', {
+      withTimezone: true,
+    }),
+
+    /** Skips so far; at three the candidate expires rather than nagging. */
+    skipCount: integer('skip_count').notNull().default(0),
 
     signals: jsonb('signals'),
     rankScore: numeric('rank_score', { precision: 8, scale: 4 }),
@@ -322,6 +408,18 @@ export const candidates = pgTable(
       ]),
     ),
     check(
+      'candidates_introduced_by',
+      oneOf(t.introducedBy, [
+        'builder',
+        'builder_with_agent',
+        'agent',
+        'template',
+        'automation',
+        'other_human',
+        'unknown',
+      ]),
+    ),
+    check(
       'candidates_dismissed_reason',
       sql`${t.dismissedReason} IS NULL OR ${oneOf(t.dismissedReason, [
         'not_my_choice',
@@ -354,6 +452,15 @@ export const decisions = pgTable(
       .unique(),
 
     origin: text('origin').notNull(),
+
+    /**
+     * The builder's relationship to the choice (0003): `made` it, `directed`
+     * their agent to make it, or `kept` an agent's choice after understanding
+     * it. `kept` is an honest record, not a lesser one — but it must never be
+     * shown as `made` (G4). No default, so every writer has to state it;
+     * immutable after insert, enforced by trigger in 0003_decisions_role_guard.
+     */
+    role: text('role').notNull(),
 
     anchorSha: char('anchor_sha', { length: 40 }),
     anchorPath: text('anchor_path'),
@@ -404,6 +511,7 @@ export const decisions = pgTable(
         'entered_manually',
       ]),
     ),
+    check('decisions_role', oneOf(t.role, ['made', 'directed', 'kept'])),
     check(
       'decisions_provenance',
       oneOf(t.provenance, ['pre_registered', 'retrospective']),

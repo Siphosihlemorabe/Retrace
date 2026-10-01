@@ -15,6 +15,20 @@
       "when": 1790244560667,
       "tag": "0001_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790858428166,
+      "tag": "0002_capture_and_authorship",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790858442629,
+      "tag": "0003_decisions_role_guard",
+      "breakpoints": true
     }
   ]
 }

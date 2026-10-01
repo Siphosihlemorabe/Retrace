@@ -159,8 +159,10 @@ describe.skipIf(skipWithoutDatabase())('schema guarantees', () => {
   test('re-running detection does not duplicate candidates', async () => {
     const insert = `
       INSERT INTO candidates (repo_id, user_id, kind, subject_kind, subject_key,
-                              introducing_sha, detector_version)
-      VALUES ($1, $2, 'dependency_choice', 'dependency', 'npm:prisma', $3, 1)`;
+                              introducing_sha, detector_version,
+                              introduced_by, authorship_version)
+      VALUES ($1, $2, 'dependency_choice', 'dependency', 'npm:prisma', $3, 1,
+              'builder', 1)`;
     await q(insert, [repoId, userId, 'c'.repeat(40)]);
     const error = await mustFail(insert, [repoId, userId, 'c'.repeat(40)]);
     expect(error.message).toMatch(/candidates_dedupe_unq/);
@@ -182,6 +184,69 @@ describe.skipIf(skipWithoutDatabase())('schema guarantees', () => {
       `SELECT indexdef FROM pg_indexes WHERE indexname = 'candidates_ask_budget_idx'`,
     );
     expect(result.rows[0]?.indexdef).toMatch(/WHERE \(status = 'pending'/);
+  });
+
+  // 0002: a local clone is honest about having no GitHub identity, and a
+  // GitHub repo still cannot pretend to be one without its fields.
+  test('local clones need no installation; GitHub repos still do', async () => {
+    const local = await q(
+      `INSERT INTO repos (source, name, default_branch, local_path, root_sha)
+       VALUES ('local_clone', 'fixture-local', 'main', '/tmp/fixture-local', $1)
+       RETURNING id`,
+      ['d'.repeat(40)],
+    );
+    expect(local.rows).toHaveLength(1);
+
+    const duplicate = await mustFail(
+      `INSERT INTO repos (source, name, default_branch, local_path, root_sha)
+       VALUES ('local_clone', 'fixture-local', 'main', '/tmp/fixture-local', $1)`,
+      ['d'.repeat(40)],
+    );
+    expect(duplicate.message).toMatch(/repos_local_clone_unq/);
+
+    const noPath = await mustFail(
+      `INSERT INTO repos (source, name, default_branch) VALUES ('local_clone', 'x', 'main')`,
+    );
+    expect(noPath.message).toMatch(/repos_local_clone_fields/);
+
+    const fakeGithub = await mustFail(
+      `INSERT INTO repos (source, name, default_branch) VALUES ('github', 'x', 'main')`,
+    );
+    expect(fakeGithub.message).toMatch(/repos_github_fields/);
+
+    await q(`DELETE FROM repos WHERE id = $1`, [local.rows[0].id]);
+  });
+
+  // 0003: who made a change is a constrained judgement, not free text.
+  test('authorship classes are constrained', async () => {
+    const error = await mustFail(
+      `UPDATE candidates SET introduced_by = 'probably_me' WHERE repo_id = $1`,
+      [repoId],
+    );
+    expect(error.message).toMatch(/candidates_introduced_by/);
+  });
+
+  // 0003 + G4: "kept an agent's choice" can never become "made the choice".
+  test('a decision states its role, and the role cannot be rewritten', async () => {
+    const missing = await mustFail(
+      `INSERT INTO decisions (user_id, origin) VALUES ($1, 'entered_manually')`,
+      [userId],
+    );
+    expect(missing.message).toMatch(/role/);
+
+    const decision = await q(
+      `INSERT INTO decisions (user_id, origin, role, cost)
+       VALUES ($1, 'prompted_by_detection', 'kept', 'fixture') RETURNING id`,
+      [userId],
+    );
+    const id = decision.rows[0].id;
+
+    const rewrite = await mustFail(`UPDATE decisions SET role = 'made' WHERE id = $1`, [id]);
+    expect(rewrite.message).toMatch(/immutable/);
+
+    // Other fields stay editable — revisions are the point of the cost check.
+    await q(`UPDATE decisions SET cost = 'revised' WHERE id = $1`, [id]);
+    await q(`DELETE FROM decisions WHERE id = $1`, [id]);
   });
 
   // The one constraint CLAUDE.md says must survive: matching has to be possible

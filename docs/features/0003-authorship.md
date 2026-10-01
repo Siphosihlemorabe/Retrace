@@ -231,13 +231,13 @@ Edit freely — ordering reflects dependency, not priority.
 - [ ] `DETECTOR_VERSION = 2`; CLI output shows authorship per candidate
 
 **Schema** — migration 0002 (shared with 0002), `src/db/schema.ts`
-- [ ] `candidates.introduced_by` (CHECK over the seven classes),
+- [x] `candidates.introduced_by` (CHECK over the seven classes),
       `candidates.introducing_author_email`, `candidates.authorship_version`
 - [ ] `candidates.commit_index_at_introduction`, `candidates.commit_count_at_detection`;
       stop writing `project_age_days_at_introduction` (see open question 3)
-- [ ] `decisions.role` in (`made`, `directed`, `kept`), NOT NULL, copied at insert and
+- [x] `decisions.role` in (`made`, `directed`, `kept`), NOT NULL, copied at insert and
       never updated
-- [ ] Somewhere to remember "this identity is not me" (open question 2)
+- [x] Somewhere to remember "this identity is not me" (open question 2)
 
 **Identity setup** — `src/core/decisions/identity.ts` + `src/cli/`
 - [ ] First-run identity prompt, outside the budget, highest commit count first
