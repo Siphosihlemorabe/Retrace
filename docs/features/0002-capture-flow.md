@@ -200,11 +200,12 @@ Edit freely — ordering reflects dependency, not priority.
 - [x] `asked_at` on show; skip counter; expire after three skips
 
 **Cost check** — `src/core/decisions/cost-check.ts`
-- [ ] `checkCost(text, context) → { namesLoss, systemSpecific, feedback[] }`, pure,
+- [x] `checkCost(text, context) → { namesLoss, systemSpecific, feedback[] }`, pure,
       no I/O — the repo facts it needs are passed in
-- [ ] `COST_CHECK_VERSION` constant, stored alongside the result
+- [x] `COST_CHECK_VERSION` constant, stored alongside the result
 - [ ] A fixture list of real cost sentences (good and bad) with expected verdicts —
-      start from your own answers once you have some
+      start from your own answers once you have some. *A synthetic list is in place
+      (`cost-check.test.ts`); this stays unticked until it holds real answers.*
 
 **Recording** — `src/core/decisions/record.ts`
 - [ ] Write a decision from a candidate answer, anchor copied from the candidate
@@ -220,7 +221,7 @@ Edit freely — ordering reflects dependency, not priority.
 - [ ] `npm run decisions` — list what has been recorded, with what each is missing
 
 **Tests**
-- [ ] Cost check against the fixture list
+- [x] Cost check against the fixture list
 - [x] Candidate mapping round-trip (pure)
 - [ ] Recording against a real database: answer → rows → status, revisions written on
       edit, re-running `ask` does not re-ask
@@ -303,5 +304,11 @@ Recorded as the build goes, rather than by rewriting the plan above.
 - **The budget only offers what can be framed honestly**: authorship `builder`,
   `builder_with_agent` or `agent`. An `unknown` author waits for the identity question
   (0003). Showing a candidate spends the budget, whether or not it is answered.
+- **Naming the choice or its alternative is not system-specific.** This is tighter than
+  the spec. "react-router-dom has no typed params" is true of every project using it.
+  Other dependencies, tracked file paths, identifiers and numbers count.
+- **The cost check's fixtures are synthetic until real answers exist.** They include one
+  deliberate known miss: a real, specific cost phrased without a loss construction. It is
+  kept so a rule change that fixes it shows up as a diff.
 - **`.env` is loaded by Node itself** (`--env-file-if-exists`, `process.loadEnvFile`),
   not dotenv. One less dependency.
