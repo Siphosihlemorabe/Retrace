@@ -208,11 +208,11 @@ Edit freely — ordering reflects dependency, not priority.
       (`cost-check.test.ts`); this stays unticked until it holds real answers.*
 
 **Recording** — `src/core/decisions/record.ts`
-- [ ] Write a decision from a candidate answer, anchor copied from the candidate
-- [ ] Write a learning goal from a `[g]` answer
-- [ ] Write a dismissal with reason
-- [ ] Every edit to a shape field writes the prior version to `decision_revisions`
-- [ ] All writes for one answer in one transaction
+- [x] Write a decision from a candidate answer, anchor copied from the candidate
+- [x] Write a learning goal from a `[g]` answer
+- [x] Write a dismissal with reason
+- [x] Every edit to a shape field writes the prior version to `decision_revisions`
+- [x] All writes for one answer in one transaction
 
 **CLI** — `src/cli/`
 - [ ] `npm run ask <path>` — interactive loop over the week's budget

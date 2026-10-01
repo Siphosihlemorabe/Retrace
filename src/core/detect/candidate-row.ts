@@ -79,6 +79,8 @@ export interface StoredCandidate {
   kind: CandidateKind;
   subjectKey: string;
   introducingSha: string;
+  /** The anchor file: for dependency candidates, the manifest walked. */
+  filePath: string | null;
   filesInCommit: number | null;
   commitIndex: number | null;
   commitCount: number | null;
@@ -98,6 +100,7 @@ export function fromCandidateRow(row: CandidateRow): StoredCandidate {
     kind: row.kind as CandidateKind,
     subjectKey: row.subjectKey,
     introducingSha: row.introducingSha,
+    filePath: row.filePath,
     filesInCommit: row.filesInIntroducingCommit,
     commitIndex: row.commitIndexAtIntroduction,
     commitCount: row.commitCountAtDetection,
