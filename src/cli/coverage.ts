@@ -80,7 +80,7 @@ function printGoal(g: GoalCoverage, project: string, at: (sha: string) => string
     const more = o.sightings.length > 1 ? ` (+${o.sightings.length - 1} more)` : '';
     const via = best.via === 'orm' ? ' · via ORM' : '';
     console.log(
-      `  ${mark} ${STATUS[o.status]}  ${o.name.padEnd(24)} ${who}${when}${via} · ${best.path}:${best.lineStart}-${best.lineEnd} · ${best.sha.slice(0, 7)} ${at(best.sha)}${more}`,
+      `  ${mark} ${STATUS[o.status]}  ${o.name.padEnd(24)} ${who}${when}${via} · ${best.path}:${best.lineStart}-${best.lineEnd} · ${best.sha.slice(0, 7)} ${best.when === 'before_goal' ? 'in the code at ' : ''}${at(best.sha)}${more}`,
     );
   }
   console.log('    (· in the left margin: not in your objective for this project, still counted out of the full list)');

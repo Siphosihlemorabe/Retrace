@@ -17,7 +17,7 @@ import {
   type RepoView,
 } from '../api.js';
 
-type Identity = IdentitiesResponse['unresolved'][number];
+export type Identity = IdentitiesResponse['unresolved'][number];
 
 const LIMITS = [3, 5, 10];
 
@@ -153,7 +153,7 @@ function AskFlow({ repoId, limit }: { repoId: string; limit: number }) {
 
 // ---------------------------------------------------------------------------
 
-function IdentityStep(props: { identity: Identity; remaining: number; onDone: () => void }) {
+export function IdentityStep(props: { identity: Identity; remaining: number; onDone: () => void }) {
   const { identity, remaining, onDone } = props;
   const [error, setError] = useState<string | null>(null);
 

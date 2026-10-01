@@ -6,6 +6,13 @@ import type {
   Answer,
   AnswerResponse,
   CalibrationResponse,
+  CodeViewResponse,
+  CoverageResponse,
+  GithubReadyResponse,
+  LabelResponse,
+  ScanResponse,
+  SetGoalsResponse,
+  SkillsResponse,
   DecisionShape,
   DecisionsResponse,
   IdentitiesResponse,
@@ -49,6 +56,20 @@ export const api = {
     post<ManualResponse>(`/api/repos/${repoId}/manual`, { shape, anchor }),
   decisions: () => request<DecisionsResponse>('/api/decisions'),
   calibration: () => request<CalibrationResponse>('/api/calibration'),
+
+  // 0007
+  skills: () => request<SkillsResponse>('/api/skills'),
+  githubReady: () => request<GithubReadyResponse>('/api/github-ready'),
+  createProject: (path: string, github?: 'private' | 'public') =>
+    post<RepoView>('/api/projects', github === undefined ? { path } : { path, github }),
+  setGoals: (repoId: string, goals: { name: string; objective: 'all' | string[] }[]) =>
+    post<SetGoalsResponse>(`/api/repos/${repoId}/goals`, { goals }),
+  scan: (repoId: string) => post<ScanResponse>(`/api/repos/${repoId}/scan`),
+  coverage: (repoId: string) => request<CoverageResponse>(`/api/repos/${repoId}/coverage`),
+  code: (repoId: string, sha: string, path: string) =>
+    request<CodeViewResponse>(`/api/repos/${repoId}/code?sha=${sha}&path=${encodeURIComponent(path)}`),
+  label: (repoId: string, body: { sha: string; path: string; lineStart: number; lineEnd: number; label: 'agent' | 'me' }) =>
+    post<LabelResponse>(`/api/repos/${repoId}/labels`, body),
 };
 
 export type * from '../../src/server/api-types.js';

@@ -8,14 +8,16 @@ import { api, type RepoView } from './api.js';
 import { AskPage } from './pages/Ask.js';
 import { CalibrationPage } from './pages/Calibration.js';
 import { DecisionsPage } from './pages/Decisions.js';
+import { GoalsPage } from './pages/Goals.js';
 import { ReposPage } from './pages/Repos.js';
 
-type Tab = 'ask' | 'decisions' | 'calibration' | 'repos';
+type Tab = 'goals' | 'ask' | 'decisions' | 'calibration' | 'repos';
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'goals', label: 'Goals' },
   { id: 'ask', label: 'Ask' },
   { id: 'decisions', label: 'Decisions' },
   { id: 'calibration', label: 'Calibration' },
-  { id: 'repos', label: 'Repos' },
+  { id: 'repos', label: 'Projects' },
 ];
 
 /** Remembered per browser only; losing it costs one click. */
@@ -36,7 +38,7 @@ const remember = (id: string) => {
 };
 
 export function App() {
-  const [tab, setTab] = useState<Tab>('ask');
+  const [tab, setTab] = useState<Tab>('goals');
   const [login, setLogin] = useState('');
   const [repos, setRepos] = useState<RepoView[] | null>(null);
   const [repoId, setRepoId] = useState<string | null>(remembered());
@@ -82,6 +84,8 @@ export function App() {
       <main>
         {repos === null ? (
           <p className="muted">Loading…</p>
+        ) : tab === 'goals' ? (
+          <GoalsPage repos={repos} repoId={repoId} onPick={pick} onAddRepo={() => setTab('repos')} />
         ) : tab === 'ask' ? (
           <AskPage repos={repos} repoId={repoId} onPick={pick} onAddRepo={() => setTab('repos')} />
         ) : tab === 'decisions' ? (
@@ -94,7 +98,7 @@ export function App() {
             onAdded={async (repo) => {
               await loadRepos();
               pick(repo.id);
-              setTab('ask');
+              setTab('goals');
             }}
           />
         )}

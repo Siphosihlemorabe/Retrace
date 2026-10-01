@@ -1,6 +1,6 @@
 # 0007 — Project goals and learning outcomes
 
-**Status:** agreed (2026-10-01): building. Matches [product-direction.md](../product-direction.md) (§3.1–3.3, 3.6–3.7)
+**Status:** built (2026-10-01). Matches [product-direction.md](../product-direction.md) (§3.1–3.3, 3.6–3.7)
 **Build order:** step 2, learning goals while building. First of 0007 → 0009 → 0010 → 0011 → 0012 → 0008
 **Writes to the database:** yes — goals, objectives, outcome sightings, line labels, commit sightings
 **Guardrails:** G2, G3, G4, G5, G8, G11, G12, G13, G14 (see [how-it-works](../how-it-works.md#guardrails))
@@ -239,7 +239,7 @@ Per goal, per outcome, the strongest status reached:
 - [x] `npm run goals <repo>`, `npm run coverage <repo>`
 - [x] "New project" can create the folder (`git init`, an empty first commit) and,
       if the builder confirms and `gh` is available, the GitHub repo
-- [ ] Web: "New project" (any skill, tick the objective), a Coverage tab (percentages and
+- [x] Web: "New project" (any skill, tick the objective), a Coverage tab (percentages and
       the outcome list), and a code view (highlighted ranges, an authorship gutter,
       relabel by selecting lines)
 
@@ -251,7 +251,7 @@ Per goal, per outcome, the strongest status reached:
       author and before/after label
 - [x] Unticking an outcome never changes the percentage's denominator
 - [x] A relabel overrides blame for exactly those lines
-- [ ] Copy checks: no overall score; "learned" never appears for undocumented or unchecked
+- [x] Copy checks: no overall score; "learned" never appears for undocumented or unchecked
       outcomes
 
 **Not deliverables, on purpose:** documenting (0010), checks (0011), model lists and coverage
@@ -310,6 +310,15 @@ must read as *what to work on next*, never as a verdict (G5).
   commit as a template. Its lines therefore read as template, not as the builder's. This is
   0001's open question 1b, now visible in coverage. Until it's decided, a relabel ("I wrote
   this") is the fix.
+- **Checked in a real browser**, against the test database with a demo project, through the
+  whole flow: the identity question, ticking SQL and Docker, coverage with before- and
+  after-goal sightings, the code view opening under its row with every line's author and the
+  touched lines highlighted, and a relabel changing both the gutter and the row at once.
+- **"Commit N" for code that was already there means *where it was seen*, not where it was
+  written.** A snapshot sighting's commit is HEAD when the goal was set, so the UI says "in the
+  code at commit N". Found in the browser check: it had read as if the agent wrote it then.
+- **No way to remove a goal yet.** Goals can be added and objectives edited. Removing a whole
+  skill from a project is not built, because nothing in the product direction asks for it.
 - **A custom skill's `kind` is stored as "technology"**, because `skills.kind` is required and
   the taxonomy question in `CLAUDE.md` is still open.
 
