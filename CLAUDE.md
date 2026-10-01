@@ -229,7 +229,9 @@ Kept after the feature ships, updated with what actually happened.
 
 Each doc follows the shape of `0001`:
 
-- Header: **Status** · **Build order** step · **Writes to the database**
+- Header: **Status** · **Build order** step · **Writes to the database** ·
+  **Guardrails** — which of [`docs/how-it-works.md`](./docs/how-it-works.md#guardrails)'s
+  G-rules it touches, and how it keeps each one
 - **What it is** — with an example of the output or interaction
 - **Why this before anything else** — including **what choosing this costs**
 - **What it is not** — scope guards, each deliberate
