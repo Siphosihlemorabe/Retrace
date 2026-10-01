@@ -197,7 +197,7 @@ Edit freely — ordering reflects dependency, not priority.
 
 **Schema** — new migration, `src/db/schema.ts`
 - [ ] `practice_sessions`: user, repo, `kind` in (`explain_back`, `interview`),
-      started/ended. `interview` reserved for 0006
+      started/ended. `interview` reserved for 0007
 - [ ] `practice_items`: session, anchor (SHA, path, lines), anchor authorship, question,
       key points, answer, judgement, generation cache id, prompt and judge versions,
       model, tokens, `disputed` + note, optional `learning_goal_id`
@@ -276,7 +276,7 @@ judge makes is checkable in seconds, so it can be disputed in seconds.
 
 ## What this unblocks
 
-**0006 — Interview prep** (build step 2). Same practice tables (`kind = 'interview'`),
+**0007 — Interview prep** (build step 2). Same practice tables (`kind = 'interview'`),
 same `core/llm`, same judge discipline. It points them at decision records instead of
 code: an interviewer persona asks about a recorded decision, then follow-ups that push
 on its cost and revisit condition, and a debrief says what landed and what didn't.

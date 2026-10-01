@@ -31,7 +31,7 @@ the doc says so in a decision section. It does not happen quietly in code.
               ┌─────────────────────┐                  ┌──────────────────────┐
               │ PRACTICE (private)  │                  │ EVIDENCE (pointers)  │
               │ explain-back  0005  │  ───never───▶    │ repo · SHA · path ·  │
-              │ interview prep 0006 │                  │ lines · what it shows│
+              │ interview prep 0007 │                  │ lines · what it shows│
               │ coached, unlimited  │                  └──────────┬───────────┘
               └─────────┬───────────┘                             │
                         │ gaps                                    ▼
@@ -93,7 +93,7 @@ agent's* choice and to ask about each honestly.
 | Entry point | What it does | Exists |
 |---|---|---|
 | `src/cli/` | The fast loop: detect, ask, practice, against a local clone | detect, ask |
-| `src/server/` | Webhook receiver, API, static web app | no |
+| `src/server/` | Webhook receiver, API, static web app | local API for 0006 |
 | `src/worker/` | Drains `jobs`: backfill, deferred analysis | no |
 
 | Core module | Responsibility | Introduced by |
@@ -101,7 +101,7 @@ agent's* choice and to ask about each honestly.
 | `core/git` | Typed wrappers over git porcelain. Shells out. | 0001 |
 | `core/detect` | Detectors, the three tests, authorship, ranking, catalogues | 0001, 0003, 0004 |
 | `core/decisions` | Record shape, budget, framing, cost check, recording | 0002, 0003 |
-| `core/practice` | Explain-back and interview sessions, judging | 0005, 0006 |
+| `core/practice` | Explain-back and interview sessions, judging | 0005, 0007 |
 | `core/llm` | Anthropic client, versioned prompts, `analysis_cache` | 0005 |
 | `core/evidence` | Anchors, re-verification, broken-pointer detection | later |
 | `core/github` | App auth, webhook verification | later |
@@ -182,7 +182,7 @@ budgeted. Prompts the product starts always are.
 names what is missing. It does not produce prose for the builder to adopt as their own
 explanation or decision record. "Here is what a strong answer would *cover*" is fine.
 "Here is a strong answer" is not.
-*Enforced by:* prompt rubric (0005, 0006) and review of every prompt change.
+*Enforced by:* prompt rubric (0005, 0007) and review of every prompt change.
 
 ### Trust
 
@@ -296,7 +296,8 @@ Decisions the spec leaves open go back to the builder.
 | [0003](./features/0003-authorship.md) authorship: who made this change | 1 | built | Can we tell the builder's choice from their agent's, cheaply and honestly? |
 | [0004](./features/0004-inherited-settings-detector.md) inherited-settings detector | 1 | proposed | Does reading root-vs-HEAD state find more, and better, questions than history? |
 | [0005](./features/0005-explain-back.md) explain-back | 1 | proposed | Can a model judge an explanation of system-specific code well enough to coach? |
-| 0006 interview prep | 2 | not written | Does rehearsing on your own decisions make you better at defending them? |
+| [0006](./features/0006-local-web-ui.md) local web UI | 1 | building | Can the builder comfortably take the two-week test? |
+| 0007 interview prep | 2 | not written | Does rehearsing on your own decisions make you better at defending them? |
 
 **Order and gates.**
 
@@ -308,7 +309,9 @@ Decisions the spec leaves open go back to the builder.
   showed the history-based signal is starved.
 - **0005 after 0002.** It can run alongside 0004. It is the first LLM feature and builds
   `core/llm`.
-- **0006 interview prep after 0005**, because it reuses the LLM plumbing and needs
+- **0006 local web UI** was added at the builder's request, to test the capture loop in a
+  browser. It adds no capability.
+- **0007 interview prep after 0005**, because it reuses the LLM plumbing and needs
   enough decisions to rehearse on. It is the first thing anyone would pay for, and it is
   fourth because without the three before it there is nothing honest to rehearse.
 
