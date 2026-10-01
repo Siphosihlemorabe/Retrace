@@ -5,6 +5,7 @@
  * no detector, because unanswered prompts are worth nothing — so the job here
  * is mostly deciding what *not* to show, and saying why.
  */
+import type { Authorship } from './authorship.js';
 import type { Candidate, CandidateKind } from './dependency.js';
 
 /** All the tuning in one place, so a ranking change is a visible diff. */
@@ -27,13 +28,18 @@ export const THRESHOLD = 0.5;
  * Stored on every candidate row and part of its dedupe key. Bump it whenever
  * the three tests, the weights, or the threshold change what a candidate
  * means — it lives here so a tuning change and its bump land in one diff.
+ *
+ * 2: authorship (0003) — someone else's and automated changes are suppressed,
+ *    and deliberateness reports commit position instead of date-based age.
  */
-export const DETECTOR_VERSION = 1;
+export const DETECTOR_VERSION = 2;
 
 /** Imports beyond this add no further evidence of being load-bearing. */
 const IMPORT_SATURATION = 5;
 
 export type SuppressionReason =
+  | 'someone else’s change'
+  | 'automated change'
   | 'no known alternative'
   | 'not load-bearing'
   | 'not deliberate'
@@ -49,6 +55,8 @@ export interface RankSummary {
   total: number;
   surfaced: number;
   suppressed: Record<SuppressionReason, number>;
+  /** Who made the surfaced candidates. About the candidates, never the person (G2). */
+  surfacedBy: Partial<Record<Authorship, number>>;
 }
 
 export interface RankResult {
@@ -82,6 +90,8 @@ export function scoreOf(candidate: Candidate): number {
  */
 export function rank(candidates: Candidate[]): RankResult {
   const suppressed: Record<SuppressionReason, number> = {
+    'someone else’s change': 0,
+    'automated change': 0,
     'no known alternative': 0,
     'not load-bearing': 0,
     'not deliberate': 0,
@@ -96,7 +106,16 @@ export function rank(candidates: Candidate[]): RankResult {
     let detail: string | null = null;
 
     // Order matters: report the most fundamental failure, not the last one.
-    if (!deliberate.pass) {
+    // Authorship first — however good the evidence, a colleague's or a bot's
+    // change is not the builder's to answer for (0003).
+    const by = candidate.authorship.authorship;
+    if (by === 'other_human') {
+      reason = 'someone else’s change';
+      detail = `${candidate.authorEmail} — ${candidate.authorship.rule}`;
+    } else if (by === 'automation') {
+      reason = 'automated change';
+      detail = candidate.authorship.actor ?? candidate.authorship.rule;
+    } else if (!deliberate.pass) {
       reason = 'not deliberate';
       detail = deliberate.why;
     } else if (!alternative.pass) {
@@ -120,12 +139,20 @@ export function rank(candidates: Candidate[]): RankResult {
     return b.date.getTime() - a.date.getTime();
   });
 
+  const surfacedBy: Partial<Record<Authorship, number>> = {};
+  for (const c of ranked) {
+    if (c.suppressed !== null) continue;
+    const by = c.authorship.authorship;
+    surfacedBy[by] = (surfacedBy[by] ?? 0) + 1;
+  }
+
   return {
     ranked,
     summary: {
       total: ranked.length,
       surfaced: ranked.filter((c) => c.suppressed === null).length,
       suppressed,
+      surfacedBy,
     },
   };
 }

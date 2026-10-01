@@ -225,10 +225,10 @@ Edit freely — ordering reflects dependency, not priority.
 - [x] `AUTHORSHIP_VERSION`
 
 **Detector** — `src/core/detect/dependency.ts`, `rank.ts`
-- [ ] Authorship on every candidate; `other_human` and `automation` suppressed with
+- [x] Authorship on every candidate; `other_human` and `automation` suppressed with
       their own `SuppressionReason`
-- [ ] Commit position replaces date-based project age in the deliberateness test
-- [ ] `DETECTOR_VERSION = 2`; CLI output shows authorship per candidate
+- [x] Commit position replaces date-based project age in the deliberateness test
+- [x] `DETECTOR_VERSION = 2`; CLI output shows authorship per candidate
 
 **Schema** — migration 0002 (shared with 0002), `src/db/schema.ts`
 - [x] `candidates.introduced_by` (CHECK over the seven classes),
@@ -249,12 +249,12 @@ Edit freely — ordering reflects dependency, not priority.
       introducing SHA. `--calibration` counts disputes alongside dismissals
 
 **Tests**
-- [ ] Fixture repo: a root commit with a fake 2025 date and a template subject, an agent
+- [x] Fixture repo: a root commit with a fake 2025 date and a template subject, an agent
       commit carrying a swap, a builder commit, a dependabot bump, a `Co-Authored-By`
       commit. Each classified correctly
-- [ ] Regression: the agent swap still surfaces (it must not be filtered out), framed as
+- [x] Regression: the agent swap still surfaces (it must not be filtered out), framed as
       `agent`
-- [ ] Commit position is unaffected by rewriting commit dates
+- [x] Commit position is unaffected by rewriting commit dates
 - [ ] Copy check on the agent frame: no "you chose", no counts of agent commits (G4, G5)
 
 **Not deliverables, on purpose:** any model-based guess at AI involvement, per-person

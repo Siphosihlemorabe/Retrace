@@ -132,7 +132,9 @@ describe('the three tests', () => {
     expect(swap?.tests.loadBearing.pass).toBe(true);
     expect(swap?.tests.deliberate.pass).toBe(true);
     expect(swap?.importingFiles).toBeGreaterThanOrEqual(3);
-    expect(swap?.projectAgeDays).toBe(120);
+    // Third commit of seven: position, not the (fictional) 120 days.
+    expect(swap?.commitIndex).toBe(3);
+    expect(swap?.commitCount).toBe(7);
   });
 
   // The filter that matters most: asking about create-next-app's choices is

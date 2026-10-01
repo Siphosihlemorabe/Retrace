@@ -8,16 +8,19 @@
  * option actually hurt.
  */
 import {
+  commitMeta,
+  commitPositions,
   commitStats,
   countImportingFiles,
   logForPath,
-  repoFacts,
   rootShas,
   showFile,
   type Commit,
+  type CommitPositions,
   type CommitStats,
   type Repo,
 } from '../git/index.js';
+import { classifyCommit, type CommitAuthorship, type IdentitySet } from './authorship.js';
 import { alternativesTo, categoryOf, isNonDecision } from './catalog.js';
 import { diffManifests, parseManifest, type Dep, type Manifest } from './manifest.js';
 
@@ -44,7 +47,11 @@ export interface Candidate {
   authorEmail: string;
 
   filesInCommit: number;
-  projectAgeDays: number;
+  /** "Commit 5 of 482". Position, not age: git dates are set by the committer. */
+  commitIndex: number;
+  commitCount: number;
+  /** Who made the change (0003) — decides how the question is framed. */
+  authorship: CommitAuthorship;
   introducedAlone: boolean;
   looksScaffoldGenerated: boolean;
   importingFiles: number;
@@ -61,6 +68,11 @@ export interface DetectOptions {
   manifestPath?: string;
   /** How many commits a removal may lag its replacement by. */
   replacementWindow?: number;
+  /**
+   * The builder's confirmed identities. Without them every human author is
+   * `unknown` — detection still runs, and the identity question resolves it.
+   */
+  identities?: IdentitySet;
 }
 
 export interface DetectResult {
@@ -92,10 +104,12 @@ export async function detectDependencyDecisions(
   const manifestPath = options.manifestPath ?? DEFAULTS.manifestPath;
   const window = options.replacementWindow ?? DEFAULTS.replacementWindow;
 
-  const [facts, roots, commits] = await Promise.all([
-    repoFacts(repo),
+  const identities = options.identities ?? { mine: new Set(), others: new Set() };
+
+  const [roots, commits, positions] = await Promise.all([
     rootShas(repo),
     logForPath(repo, manifestPath),
+    commitPositions(repo),
   ]);
 
   // --- 1. Walk the manifest, collecting raw adds and removes -----------------
@@ -161,6 +175,15 @@ export async function detectDependencyDecisions(
     return count;
   };
 
+  const authorshipCache = new Map<string, CommitAuthorship>();
+  const authorshipFor = async (sha: string): Promise<CommitAuthorship> => {
+    const cached = authorshipCache.get(sha);
+    if (cached !== undefined) return cached;
+    const result = classifyCommit(await commitMeta(repo, sha), roots.has(sha), identities);
+    authorshipCache.set(sha, result);
+    return result;
+  };
+
   const candidates: Candidate[] = [];
 
   for (const add of adds) {
@@ -174,7 +197,8 @@ export async function detectDependencyDecisions(
         commit: add.commit,
         stats: await statsFor(add.commit.sha),
         importingFiles: await importsFor(add.dep.name),
-        firstCommitAt: facts.firstCommitAt,
+        positions,
+        authorship: await authorshipFor(add.commit.sha),
         isRoot: roots.has(add.commit.sha),
       }),
     );
@@ -192,7 +216,8 @@ export async function detectDependencyDecisions(
         commit: remove.commit,
         stats: await statsFor(remove.commit.sha),
         importingFiles: 0,
-        firstCommitAt: facts.firstCommitAt,
+        positions,
+        authorship: await authorshipFor(remove.commit.sha),
         isRoot: roots.has(remove.commit.sha),
       }),
     );
@@ -208,7 +233,8 @@ interface BuildInput {
   commit: Commit;
   stats: CommitStats;
   importingFiles: number;
-  firstCommitAt: Date;
+  positions: CommitPositions;
+  authorship: CommitAuthorship;
   isRoot: boolean;
 }
 
@@ -216,12 +242,9 @@ async function buildCandidate(input: BuildInput): Promise<Candidate> {
   const { kind, dep, displaced, commit, stats, importingFiles, isRoot } = input;
 
   const category = categoryOf(dep.name);
-  const projectAgeDays = Math.max(
-    0,
-    Math.round(
-      (commit.authoredAt.getTime() - input.firstCommitAt.getTime()) / 86_400_000,
-    ),
-  );
+  const commitIndex = input.positions.indexOf.get(commit.sha) ?? 0;
+  const commitCount = input.positions.total;
+  const position = `commit ${commitIndex} of ${commitCount}`;
 
   const looksScaffoldGenerated =
     isRoot ||
@@ -245,7 +268,9 @@ async function buildCandidate(input: BuildInput): Promise<Candidate> {
     authorEmail: commit.authorEmail,
 
     filesInCommit: stats.filesChanged,
-    projectAgeDays,
+    commitIndex,
+    commitCount,
+    authorship: input.authorship,
     introducedAlone,
     looksScaffoldGenerated,
     importingFiles,
@@ -257,7 +282,7 @@ async function buildCandidate(input: BuildInput): Promise<Candidate> {
         kind,
         looksScaffoldGenerated,
         introducedAlone,
-        projectAgeDays,
+        position,
         isRoot,
         filesChanged: stats.filesChanged,
       }),
@@ -307,7 +332,7 @@ interface DeliberateInput {
   kind: CandidateKind;
   looksScaffoldGenerated: boolean;
   introducedAlone: boolean;
-  projectAgeDays: number;
+  position: string;
   isRoot: boolean;
   filesChanged: number;
 }
@@ -330,8 +355,8 @@ function testDeliberate(input: DeliberateInput): TestResult {
     return {
       pass: true,
       why: input.introducedAlone
-        ? `swap landed alone, ${input.projectAgeDays} days into the project`
-        : `swap among ${input.filesChanged} changed files, ${input.projectAgeDays} days in`,
+        ? `swap landed alone, ${input.position}`
+        : `swap among ${input.filesChanged} changed files, ${input.position}`,
     };
   }
 
@@ -344,11 +369,11 @@ function testDeliberate(input: DeliberateInput): TestResult {
   if (input.introducedAlone) {
     return {
       pass: true,
-      why: `landed alone, ${input.projectAgeDays} days into the project`,
+      why: `landed alone, ${input.position}`,
     };
   }
   return {
     pass: true,
-    why: `${input.filesChanged} files, ${input.projectAgeDays} days into the project`,
+    why: `${input.filesChanged} files, ${input.position}`,
   };
 }

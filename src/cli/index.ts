@@ -6,6 +6,7 @@
  */
 import { parseArgs } from 'node:util';
 
+import { describeAuthorship } from '../core/decisions/framing.js';
 import { detectDependencyDecisions } from '../core/detect/dependency.js';
 import {
   DETECTOR_VERSION,
@@ -121,7 +122,10 @@ function printCandidate(candidate: RankedCandidate, position: number): void {
     `${mark} ${String(position).padStart(2)}. [${candidate.score.toFixed(2)}] ${verb} ${subject}`,
   );
   console.log(
-    `        ${candidate.shortSha}  ${candidate.date.toISOString().slice(0, 10)}  ${JSON.stringify(candidate.subject)} · ${candidate.filesInCommit} files · ${candidate.projectAgeDays}d in`,
+    `        ${candidate.shortSha}  ${candidate.date.toISOString().slice(0, 10)}  ${JSON.stringify(candidate.subject)} · ${candidate.filesInCommit} files · commit ${candidate.commitIndex} of ${candidate.commitCount}`,
+  );
+  console.log(
+    `        ${describeAuthorship(candidate.authorship, candidate.authorEmail)}`,
   );
 
   if (candidate.suppressed !== null) {
@@ -153,6 +157,13 @@ function printSummary(
   if (dropped.length > 0) {
     const detail = dropped.map(([reason, n]) => `${n} ${reason}`).join(', ');
     console.log(`suppressed: ${detail}${options.showAll ? '' : '  (--all to see them)'}`);
+  }
+
+  // Calibration for 0003: how many surfaced candidates each kind of author
+  // produced. A statement about the candidates, not about the person.
+  const by = Object.entries(summary.surfacedBy).filter(([, n]) => (n ?? 0) > 0);
+  if (by.length > 0) {
+    console.log(`surfaced, by who made the change: ${by.map(([a, n]) => `${a} ${n}`).join(', ')}`);
   }
   console.log('');
 }
