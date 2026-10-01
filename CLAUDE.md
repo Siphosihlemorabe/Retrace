@@ -209,14 +209,24 @@ code" reads as an insult and nobody will try it. "Understand your codebase bette
 
 ## How the builder wants to work
 
-He is building this to learn, deliberately, and wants to write the implementation
-himself — line by line — asking for guidance at the specific points he's stuck.
+**Claude writes the implementation, against the feature doc the builder has agreed.**
+(Changed 2026-10-01; earlier the builder wrote the code himself.) He reviews it, and
+he still has to be able to defend every choice in it, which is the standard this
+product holds its users to. So:
 
-**Default to:** explaining, proposing tradeoffs, naming what an approach costs, and
-answering the specific question asked.
+- **Build to the spec.** The edited feature doc is the brief. If the build shows the
+  spec is wrong, record it in the doc (as 0001's "First run" does) and say so. Don't
+  quietly diverge.
+- **One deliverable per commit**, ticked in the doc in the same commit, small enough to
+  review in one sitting.
+- **Name the choices in the code.** Where there was a real alternative, a short comment
+  or the commit message says what was picked and what it cost. That is the decision
+  record this product would want to find.
+- **Tests and typecheck pass before each commit.** Say plainly when something could not
+  be verified.
 
-**Don't:** produce large blocks of implementation unprompted, or hand over finished
-code when the question was about an approach.
+**Still ask first:** anything the spec leaves as a decision, schema changes not in
+the spec, and new dependencies.
 
 Be frank about weaknesses in the idea. He'd rather hear where something breaks than
 get agreement — that's the same standard the product holds its users to.
@@ -247,33 +257,28 @@ section recording it (see 0001's "First run") rather than silently rewriting the
 
 ## Current feature
 
-**Done: [0001 follow-up](./docs/features/0001-dependency-decision-detector.md#follow-up--found-while-specifying-0002)** — landed.
-Found while specifying 0002, and needed before 0002 could start:
+**Building: [0002 — Capture flow (CLI)](./docs/features/0002-capture-flow.md) together
+with [0003 — Authorship](./docs/features/0003-authorship.md).** 0003 decision 1 was
+chosen: its columns go into migration 0002, and `npm run ask` is built once, using
+0003's framing. Order:
 
-- `oneOf()` emits bind parameters into CHECK constraints, so migration 0000 cannot be
-  applied. Fix it to emit literals, regenerate 0000 (it has never been applied), and
-  restore the `citext` line
-- One kind vocabulary: `origination` → `dependency_choice`; `removal` added to the schema
-- `DETECTOR_VERSION` in `rank.ts`, next to the weights
-- First real migrate; `schema.test.ts` actually runs
+1. `.env` and the first real migrate of 0000 + 0001; DB tests fail on skip under
+   `REQUIRE_DB=1` (G20)
+2. Migration 0002: `repos.source` (0002) + authorship and commit-position columns,
+   `decisions.role`, other-identities table (0003)
+3. Local identity: builder user row from env, local clone as a repo, identity setup
+4. Authorship classification in the detector; `DETECTOR_VERSION = 2`
+5. Candidate persistence with upsert on the dedupe key
+6. Weekly ask budget
+7. Rule-based cost check (`COST_CHECK_VERSION`), no LLM
+8. Recording decisions / learning goals / dismissals, with revisions, transactional
+9. CLI: `npm run ask` (framed by authorship), `--manual`, `--calibration`,
+   `npm run decisions`, `npm run identities`
 
-**Then: [0002 — Capture flow (CLI)](./docs/features/0002-capture-flow.md)** — agreed.
-Asks about the detector's surfaced candidates and stores decisions, learning goals and
-dismissals. First feature to write to Postgres. Local clones get a `repos.source`
-column (decided). Deliverables, in order:
+The feature docs are the source of truth for the checklists; this is a summary.
 
-- Schema: `repos.source` with a conditional-nullable CHECK
-- Local identity: seed the builder's user row, register a local clone as a repo
-- Candidate persistence with upsert on the dedupe key
-- Weekly ask budget
-- Rule-based cost check (`COST_CHECK_VERSION`), no LLM
-- Recording decisions / learning goals / dismissals, with revisions, transactional
-- CLI: `npm run ask`, `--manual`, `--calibration`, `npm run decisions`
-- Tests, skipping without `DATABASE_URL`
-
-The feature doc is the source of truth for the checklist; this is a summary.
-
-Previous: [0001 — Dependency decision detector](./docs/features/0001-dependency-decision-detector.md) — built.
+Previous: [0001 — Dependency decision detector](./docs/features/0001-dependency-decision-detector.md) — built, with its follow-up.
+Proposed next: [0004](./docs/features/0004-inherited-settings-detector.md), [0005](./docs/features/0005-explain-back.md) — see [how-it-works](./docs/how-it-works.md#roadmap-against-the-build-order).
 
 ## Open questions
 

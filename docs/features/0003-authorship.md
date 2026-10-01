@@ -1,6 +1,6 @@
 # 0003 — Authorship: who made this change
 
-**Status:** proposed — for review
+**Status:** agreed — decision 1 chosen (2026-10-01); building alongside 0002
 **Build order:** step 1, tradeoff capture
 **Writes to the database:** yes — columns on `candidates` and `decisions`, identities
 in `user_git_identities`
@@ -201,7 +201,7 @@ entry.
 3. **Minimum: store `introducing_author_email` in 0002, classify later.** Cheap and keeps
    the raw fact. Costs: the prompts are still wrong until the rest lands.
 
-**Recommendation: 1.** The data is already in. Waiting for 0002 to rediscover it costs
+**Chosen: 1** (2026-10-01). The data is already in. Waiting for 0002 to rediscover it costs
 weeks of a one-person answer budget.
 
 ---

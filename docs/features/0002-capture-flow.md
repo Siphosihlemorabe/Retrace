@@ -1,6 +1,6 @@
 # 0002 — Capture flow (CLI)
 
-**Status:** agreed — ready to start (0001 follow-up landed)
+**Status:** in progress — built together with [0003](./0003-authorship.md), whose columns share migration 0002
 **Build order:** step 1, tradeoff capture
 **Writes to the database:** yes — first feature that does
 

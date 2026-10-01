@@ -271,9 +271,11 @@ would let a job spec be scored against verified claims later, even though matchi
 not built. A change that would make that impossible needs a decision section.
 *Enforced by:* `schema.test.ts`'s matching query.
 
-**G22 · The builder writes the code.** Specs describe shape, costs and decisions.
-Implementation is written by the builder, with help at the points they are stuck.
-*Enforced by:* how we work.
+**G22 · Code is built to an agreed spec, and stays defensible.** Claude writes the
+implementation against the feature doc the builder has agreed, one reviewable
+deliverable per commit, with the real choices named in comments or commit messages.
+Decisions the spec leaves open go back to the builder.
+*Enforced by:* how we work (`CLAUDE.md`, "How the builder wants to work").
 
 ### Enforcement status at a glance
 
