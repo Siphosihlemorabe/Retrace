@@ -196,8 +196,8 @@ Edit freely — ordering reflects dependency, not priority.
 - [x] Upsert on the dedupe key; never re-ask an answered candidate at the same version
 
 **Budget** — `src/core/decisions/budget.ts`
-- [ ] Next N pending candidates for the user, respecting a per-week limit
-- [ ] `asked_at` on show; skip counter; expire after three skips
+- [x] Next N pending candidates for the user, respecting a per-week limit
+- [x] `asked_at` on show; skip counter; expire after three skips
 
 **Cost check** — `src/core/decisions/cost-check.ts`
 - [ ] `checkCost(text, context) → { namesLoss, systemSpecific, feedback[] }`, pure,
@@ -298,5 +298,10 @@ Recorded as the build goes, rather than by rewriting the plan above.
   so nothing is asked that the detector now suppresses. Only surfaced candidates are stored.
 - **Writes live in `src/core/decisions/`**, not `src/db/`. `core/` takes a db argument, so
   they are testable against the test database. The spec said `src/db/`.
+- **The week is rolling seven days**, not calendar weeks. No timezone, and no Monday
+  cliff that invites a burst of questions.
+- **The budget only offers what can be framed honestly**: authorship `builder`,
+  `builder_with_agent` or `agent`. An `unknown` author waits for the identity question
+  (0003). Showing a candidate spends the budget, whether or not it is answered.
 - **`.env` is loaded by Node itself** (`--env-file-if-exists`, `process.loadEnvFile`),
   not dotenv. One less dependency.
