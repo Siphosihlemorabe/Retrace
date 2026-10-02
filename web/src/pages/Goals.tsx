@@ -266,6 +266,7 @@ function GoalCard(props: { repoId: string; goal: Goal; positions: Record<string,
                   <strong>{o.name}</strong>
                   <span className="muted small">{o.description}</span>
                   {!o.inObjective && <span className="tag">not in objective</span>}
+                  {o.retired && <span className="tag" title="Your code touched it, so it still counts toward this goal">removed from the list</span>}
                 </div>
                 {best !== undefined && (
                   <div className="where">

@@ -136,6 +136,7 @@ export interface CoverageResponse {
       name: string;
       description: string;
       inObjective: boolean;
+      retired: boolean;
       status: 'not_touched' | 'touched' | 'documented' | 'learned';
       sightings: {
         sha: string;

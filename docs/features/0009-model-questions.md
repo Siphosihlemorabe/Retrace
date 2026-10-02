@@ -256,6 +256,11 @@ for practice, which is why nothing here counts. Counting starts at 0011's check.
   never do that. Removing from the list is a different act from unticking, but the effect is
   the same. Options: allow edits only before the first sighting, or keep retired outcomes in
   the denominator once anything touched them.
+  **Decided (Claude's recommendation, 2026-10-02, applied at the builder's request):** the
+  second. An outcome taken off a list leaves the denominator only if nothing in that project
+  touched it. Once code touched it, it stays, marked "removed from the list". So a bad list
+  can still be fixed before it is used, and removing hard outcomes later cannot raise the
+  percentage.
 - **Clicked through on a scratch repo** (no model, then `claude-cli` without consent): the
   Goals review, Ask card, consent banner and Settings all worked. No model calls were made.
   Three wording fixes came out of it.

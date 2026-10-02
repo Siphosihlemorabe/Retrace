@@ -172,6 +172,15 @@ describe.skipIf(skipWithoutDatabase())('outcome lists for any skill', () => {
     expect(r).toMatchObject({ ok: true, read: 0, cached: 2, sightings: 0 });
   });
 
+  test('an outcome removed after code touched it still counts, so removing it cannot raise the percentage', async () => {
+    const reviewed = DRAFT.outcomes.filter((o) => o.name !== 'Persistence').map((o) => (o.name === 'Streams' ? { ...o, name: 'Redis Streams' } : o));
+    await saveOutcomeList(db, skillId, reviewed.filter((o) => o.name !== 'Cache invalidation'));
+    const [cov] = await loadCoverage(db, scope.userId, scope.repoId);
+    expect(cov?.total).toBe(5);
+    expect(cov?.outcomes.find((o) => o.slug === 'keydb.cache-invalidation')).toMatchObject({ retired: true, status: 'touched' });
+    await saveOutcomeList(db, skillId, reviewed);
+  });
+
   test('a run stops at its limit and says so', async () => {
     await db.delete(outcomeSightings).where(eq(outcomeSightings.repoId, scope.repoId));
     await fixture.write('src/cache.ts', "export async function put(client, key, v) {\n  await client.set(key, v, { EX: 120 });\n}\n");

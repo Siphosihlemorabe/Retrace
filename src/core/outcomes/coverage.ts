@@ -41,6 +41,8 @@ export interface OutcomeCoverage {
   name: string;
   description: string;
   inObjective: boolean;
+  /** Taken off the skill's list after code here touched it: still counted, so removing it can't raise the percentage. */
+  retired: boolean;
   status: OutcomeStatus;
   /** Best first: the builder's own, after the goal, then the rest. */
   sightings: SightingView[];
@@ -88,7 +90,7 @@ export function computeCoverage(input: {
   skill: { slug: string; name: string };
   declaredAtSha: string | null;
   declaredAt: Date;
-  outcomes: readonly { slug: string; name: string; description: string; inObjective: boolean }[];
+  outcomes: readonly { slug: string; name: string; description: string; inObjective: boolean; retired?: boolean }[];
   sightings: ReadonlyMap<string, readonly SightingView[]>;
   documented: ReadonlySet<string>;
   learned: ReadonlySet<string>;
@@ -103,7 +105,7 @@ export function computeCoverage(input: {
         : sightings.length > 0
           ? 'touched'
           : 'not_touched';
-    return { ...o, status, sightings };
+    return { slug: o.slug, name: o.name, description: o.description, inObjective: o.inObjective, retired: o.retired ?? false, status, sightings };
   });
 
   const total = outcomes.length;
@@ -142,7 +144,7 @@ export async function loadCoverage(db: Db, userId: string, repoId: string): Prom
     .orderBy(learningGoals.openedAt);
   if (goals.length === 0) return [];
 
-  const outcomeRows = await db
+  const allOutcomeRows = await db
     .select({
       goalId: learningGoalOutcomes.goalId,
       id: skillOutcomes.id,
@@ -152,11 +154,11 @@ export async function loadCoverage(db: Db, userId: string, repoId: string): Prom
       ordinal: skillOutcomes.ordinal,
       inObjective: learningGoalOutcomes.inObjective,
       source: skillOutcomes.source,
+      retiredAt: skillOutcomes.retiredAt,
     })
     .from(learningGoalOutcomes)
     .innerJoin(skillOutcomes, eq(skillOutcomes.id, learningGoalOutcomes.outcomeId))
-    // A retired outcome is no longer on the list, so it is not in the denominator either.
-    .where(and(inArray(learningGoalOutcomes.goalId, goals.map((g) => g.id)), isNull(skillOutcomes.retiredAt)))
+    .where(inArray(learningGoalOutcomes.goalId, goals.map((g) => g.id)))
     .orderBy(skillOutcomes.ordinal);
 
   const sightingRows = await db
@@ -175,6 +177,13 @@ export async function loadCoverage(db: Db, userId: string, repoId: string): Prom
     .from(outcomeSightings)
     .where(eq(outcomeSightings.repoId, repoId));
 
+  // An outcome taken off its list leaves the denominator only if nothing here
+  // touched it. Once code touched it, removing it would raise the percentage the
+  // way unticking never may (product-direction §3.7), so it stays, marked.
+  const touchedIds = new Set(sightingRows.map((s) => s.outcomeId));
+  const outcomeRows = allOutcomeRows
+    .filter((o) => o.retiredAt === null || touchedIds.has(o.id))
+    .map((o) => ({ ...o, retired: o.retiredAt !== null }));
   const slugById = new Map(outcomeRows.map((o) => [o.id, o.slug]));
   const sightings = new Map<string, SightingView[]>();
   for (const s of sightingRows) {
