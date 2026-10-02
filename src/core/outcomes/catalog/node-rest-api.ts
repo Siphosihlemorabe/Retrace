@@ -20,6 +20,7 @@ function codeRule(def: {
     slug: def.slug,
     name: def.name,
     description: def.description,
+    ...(def.onlyTests === true ? { inTests: true } : {}),
     detect(file: FileAtCommit): Hit[] {
       if (!isCodeFile(file.path)) return [];
       if (def.onlyTests === true && !isTestFile(file.path)) return [];

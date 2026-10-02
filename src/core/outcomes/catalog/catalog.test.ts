@@ -32,6 +32,10 @@ const CASES: Case[] = [
   // --- SQL -------------------------------------------------------------------
   { outcome: 'sql.filtering_sorting', path: 'q.sql', content: 'SELECT * FROM t WHERE id = 1 ORDER BY id;', expect: 'sql' },
   { outcome: 'sql.filtering_sorting', path: 'q.sql', content: '-- where should this go?', expect: false, why: 'comment' },
+  { outcome: 'sql.filtering_sorting', path: 'm.sql', content: "CREATE INDEX c_idx ON c (user_id) WHERE status = 'pending';", expect: false, why: "a partial index's WHERE is the index, not a filter" },
+  { outcome: 'sql.indexes', path: 'm.sql', content: "CREATE INDEX c_idx ON c (user_id) WHERE status = 'pending';", expect: 'sql' },
+  { outcome: 'sql.joins', path: 'src/scan.test.ts', content: "await fixture.write('q.sql', 'SELECT o.id FROM orders o LEFT JOIN customers c ON c.id = o.cid');", expect: false, why: 'a fixture in a test file' },
+  { outcome: 'node-rest-api.logging', path: 'src/detect.test.ts', content: "await fixture.write('src/log.ts', `import pino from 'pino';`);", expect: false, why: 'a fixture in a test file' },
   { outcome: 'sql.joins', path: 'db/queries.sql', content: 'SELECT b.id\nFROM bookings b\nLEFT JOIN customers c ON c.id = b.customer_id;', expect: 'sql' },
   { outcome: 'sql.joins', path: 'src/q.ts', content: 'const rows = await db.query(`\n  SELECT b.id FROM bookings b\n  INNER JOIN customers c ON c.id = b.cid\n`);', expect: 'sql', why: 'multi-line template' },
   { outcome: 'sql.joins', path: 'src/q.ts', content: "db.select().from(bookings).leftJoin(customers, eq(customers.id, bookings.customerId));", expect: 'orm' },

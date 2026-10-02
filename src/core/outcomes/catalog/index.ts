@@ -3,7 +3,7 @@
  * are synced into `skills` / `skill_outcomes` so goals and sightings can
  * reference them by key (decision 1, chosen by the builder).
  */
-import { overlapsAdded } from '../text.js';
+import { isTestFile, overlapsAdded } from '../text.js';
 import type { FileAtCommit, Hit, OutcomeDef, SkillDef } from '../types.js';
 import { DOCKER } from './docker.js';
 import { NODE_REST_API } from './node-rest-api.js';
@@ -13,7 +13,11 @@ import { SQL } from './sql.js';
  * Bump whenever a detector changes what it matches, or an outcome is added or
  * removed. Stored on every sighting (G13).
  */
-export const OUTCOMES_VERSION = 1;
+/**
+ * v2 (2026-10-02, from the 0009 ten-question check): test files touch only test
+ * outcomes, and a partial index's WHERE is not filtering.
+ */
+export const OUTCOMES_VERSION = 2;
 
 export const BUILTIN_SKILLS: readonly SkillDef[] = [SQL, DOCKER, NODE_REST_API];
 
@@ -40,8 +44,10 @@ export interface OutcomeHit extends Hit {
  */
 export function detectOutcomes(file: FileAtCommit, outcomes: readonly OutcomeDef[]): OutcomeHit[] {
   const snapshot = file.added.size === 0;
+  const inTest = isTestFile(file.path);
   const hits: OutcomeHit[] = [];
   for (const outcome of outcomes) {
+    if (inTest && outcome.inTests !== true) continue;
     for (const hit of outcome.detect(file)) {
       if (snapshot || overlapsAdded(hit, file.added)) hits.push({ ...hit, outcome: outcome.slug });
     }

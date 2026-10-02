@@ -28,6 +28,11 @@ export interface OutcomeDef {
   name: string;
   /** One line, shown when ticking the objective. */
   description: string;
+  /**
+   * Whether test files can touch it. Only test outcomes say yes: elsewhere a test
+   * file's SQL strings and imports are fixtures, not the builder's use of the skill.
+   */
+  inTests?: boolean;
   /** Every place in the file that touches this outcome. Overlap with `added` is applied by the caller. */
   detect: (file: FileAtCommit) => Hit[];
 }

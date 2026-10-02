@@ -15,6 +15,8 @@ function sqlOutcome(def: {
   orm?: RegExp;
   /** Path-based match, e.g. migration files. */
   path?: RegExp;
+  /** SQL lines that match `sql` but are another outcome's, e.g. a partial index's WHERE. */
+  except?: RegExp;
 }): OutcomeDef {
   return {
     slug: def.slug,
@@ -26,7 +28,9 @@ function sqlOutcome(def: {
       if (def.path?.test(file.path) === true && sql.size > 0) {
         hits.push(...toHits([...sql], 'sql'));
       } else if (sql.size > 0) {
-        hits.push(...toHits(matchingLines(file, def.sql, sql, sqlCode), 'sql'));
+        const lines = matchingLines(file, def.sql, sql, sqlCode);
+        const except = def.except;
+        hits.push(...toHits(except === undefined ? lines : lines.filter((n) => !except.test(file.lines[n - 1] ?? '')), 'sql'));
       }
       if (def.orm !== undefined && isCodeFile(file.path)) {
         // Exclude lines already counted as SQL so one line isn't both.
@@ -49,6 +53,8 @@ export const SQL: SkillDef = {
       name: 'Filtering and sorting',
       description: 'WHERE, ORDER BY, LIMIT',
       sql: /\b(WHERE|ORDER\s+BY|LIMIT)\b/i,
+      // A partial index's WHERE is part of the index (sql.indexes), not a query filtering rows.
+      except: /\bCREATE\s+(UNIQUE\s+)?INDEX\b/i,
       orm: /\.(orderBy|limit)\(/,
     }),
     sqlOutcome({
