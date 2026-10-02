@@ -163,7 +163,7 @@ npm run detect <dir> # run the detector against a local clone, print candidates,
 npm run ui           # the web app, at http://127.0.0.1:3000: goals, coverage, questions
 npm run goals <dir>  # set what you want to learn in a project (--new to start one)
 npm run coverage <dir> # what your code touches of your goals, and who wrote it
-npm run ask <dir>    # this week's questions; --manual, --calibration, --limit <n>
+npm run ask <dir>    # this week's questions; --manual, --calibration, --per-week <n>
 npm run decisions    # what you have recorded, and what each record is missing
 npm run identities   # which git identities are yours; --me / --not-me <email> to correct
 npm run db:generate  # generate a migration from schema changes
