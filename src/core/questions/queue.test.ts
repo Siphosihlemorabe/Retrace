@@ -17,7 +17,7 @@ import { openRepo } from '../git/index.js';
 import type { Provider } from '../llm/index.js';
 import { setGoals } from '../outcomes/goals.js';
 import { scanNewCommits, type ScanScope } from '../outcomes/scan.js';
-import { generate, type Target } from './generate.js';
+import { generate, linesNamed, type Target } from './generate.js';
 import {
   allowModelForRepo,
   answerQuestion,
@@ -218,5 +218,56 @@ describe.skipIf(skipWithoutDatabase())('generating one question', () => {
     const p = fake({ questions: [{ ...good.questions[0], lines: [40, 42] }] });
     const g = await generate({ ...scope, llmAllowed: true }, { ...target, lineStart: 2, lineEnd: 2 }, p);
     expect(g).toMatchObject({ foundBy: 'rule', fallbackReason: 'failed' });
+  });
+
+  test('a question whose text names lines it is not about falls back to the rule', async () => {
+    const q = { ...good.questions[0]!, text: 'What happens across lines 1–3 when a customer row is missing?', lines: [3, 3], keyPoints: good.questions[0]!.keyPoints };
+    const g = await generate({ ...scope, llmAllowed: true }, { ...target, lineStart: 1, lineEnd: 3 }, fake({ questions: [q] }));
+    expect(g).toMatchObject({ foundBy: 'rule', fallbackReason: 'failed' });
+  });
+});
+
+describe('lines a question names', () => {
+  test('single lines, ranges, and pairs', () => {
+    expect(linesNamed('Line 7 and line 20')).toEqual([[7, 7], [20, 20]]);
+    expect(linesNamed('lines 54–55, then lines 66 and 75')).toEqual([[54, 55], [66, 75]]);
+    expect(linesNamed('No numbers here')).toEqual([]);
+  });
+});
+
+describe.skipIf(skipWithoutDatabase())('one question per stretch of code', () => {
+  let db: Db;
+  let pool: pg.Pool;
+  let fixture: FixtureRepo;
+  let scope: ScanScope;
+
+  beforeAll(async () => {
+    ({ db, pool } = await openTestDb());
+    fixture = await createFixtureRepo();
+    await fixture.write('README.md', '# app\n');
+    await fixture.commit('initial', { author: ME });
+    const userId = await ensureBuilder(db, { githubUserId: 999000913, login: 'stretch-test' });
+    await recordIdentity(db, userId, ME, 'me');
+    const repo = await openRepo(fixture.dir);
+    scope = { db, userId, repo, repoId: (await registerLocalClone(db, repo)).id };
+    await setGoals(scope, [{ name: 'SQL', objective: ['sql.filtering_sorting', 'sql.aggregates'] }]);
+    // One line touches two outcomes.
+    await fixture.write('db/stats.sql', "SELECT status, COUNT(*) FROM orders WHERE placed_at > now() - interval '7 days' GROUP BY status;\n");
+    await fixture.commit('stats', { day: 1, author: ME });
+    await scanNewCommits(scope);
+  }, 60_000);
+
+  afterAll(async () => {
+    if (scope !== undefined) {
+      await db.delete(repos).where(eq(repos.id, scope.repoId));
+      await db.delete(users).where(eq(users.id, scope.userId));
+    }
+    await pool?.end();
+    await fixture?.remove();
+  });
+
+  test('two outcomes on the same line get one question this round', async () => {
+    const qs = await nextQuestions(scope, null);
+    expect(qs.filter((q) => q.path === 'db/stats.sql')).toHaveLength(1);
   });
 });

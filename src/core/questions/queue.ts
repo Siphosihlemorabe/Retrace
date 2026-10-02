@@ -125,11 +125,16 @@ async function targets(db: Db, userId: string, repoId: string, want: number): Pr
       inObjective: o.inObjective,
     };
   };
+  // One question per stretch of code per round: the ten-question check asked
+  // about the same index line twice, once as "indexes" and once as "filtering".
+  const chosen: { path: string; start: number; end: number }[] = [];
+  const overlapsChosen = (s: typeof sightings[number]) => chosen.some((c) => c.path === s.path && s.lineStart <= c.end && s.lineEnd >= c.start);
   const take = (list: typeof sightings) => {
     for (const s of [...list].sort((a, b) => afterFirst(a) - afterFirst(b))) {
       if (out.length >= want) return;
-      if (used.has(s.outcomeId) || askedSightings.has(s.id)) continue;
+      if (used.has(s.outcomeId) || askedSightings.has(s.id) || overlapsChosen(s)) continue;
       used.add(s.outcomeId);
+      chosen.push({ path: s.path, start: s.lineStart, end: s.lineEnd });
       out.push(sightingTarget(s));
     }
   };

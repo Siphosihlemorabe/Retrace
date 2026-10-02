@@ -95,6 +95,28 @@ const fallback = (target: Target, reason: Generated['fallbackReason']): Generate
 /** Model lines must sit inside what the model was shown; otherwise the question points at code it never saw. */
 const within = (lines: [number, number], ex: Excerpt) => lines[0] >= ex.from && lines[1] <= ex.to && lines[0] <= lines[1];
 
+/** "line 7", "lines 54–55", "lines 66 and 75": every line range a question's text names. */
+export function linesNamed(text: string): [number, number][] {
+  const out: [number, number][] = [];
+  for (const m of text.matchAll(/\blines?\s+(\d+)(?:\s*(?:–|—|-|to|and|through)\s*(\d+))?/gi)) {
+    const a = Number(m[1]);
+    const b = m[2] === undefined ? a : Number(m[2]);
+    out.push([Math.min(a, b), Math.max(a, b)]);
+  }
+  return out;
+}
+
+/**
+ * The text must not name lines beyond what the question and its key points are
+ * about. Found in the ten-question check: "lines 323–329" for an index on 324.
+ */
+function textMatchesLines(text: string, lines: [number, number], keyPoints: readonly { lines: [number, number] }[]): boolean {
+  const all = [lines, ...keyPoints.map((k) => k.lines)];
+  const from = Math.min(...all.map((l) => l[0]));
+  const to = Math.max(...all.map((l) => l[1]));
+  return linesNamed(text).every(([a, b]) => a >= from && b <= to);
+}
+
 export async function generate(scope: GenerateScope, target: Target, provider: Provider | null = providerFromEnv()): Promise<Generated> {
   if (provider === null) return fallback(target, 'off');
   if (provider.sendsCodeOffMachine && !scope.llmAllowed) return fallback(target, 'no_consent');
@@ -167,7 +189,10 @@ export async function generate(scope: GenerateScope, target: Target, provider: P
 
   const q = result.value.questions[0];
   if (q === undefined) return fallback(target, 'failed');
-  if (excerpt !== null && (!within(q.lines, excerpt) || q.keyPoints.some((k) => !within(k.lines, excerpt)))) {
+  if (
+    excerpt !== null &&
+    (!within(q.lines, excerpt) || q.keyPoints.some((k) => !within(k.lines, excerpt)) || !textMatchesLines(q.text, q.lines, q.keyPoints))
+  ) {
     // A line the model was never shown: the question can't be trusted.
     return fallback(target, 'failed');
   }
