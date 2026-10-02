@@ -305,11 +305,19 @@ must read as *what to work on next*, never as a verdict (G5).
   does not follow those lines into later commits yet. Following them would mean tracking
   each line back to its original commit, which is a later refinement if relabels turn out
   to be common.
+  **Changed 2026-10-02:** a relabel is now stored against the commit that wrote each line
+  (from blame) and the line's place there, so it holds in every later commit that leaves the
+  line alone, wherever it moved. Labels stored the old way still match at their commit.
 - **Imported repos show their first commit as "template".** `confetti`'s root is a wholesale
   import of existing code ("joins the company pipeline"), and 0003 classifies every root
   commit as a template. Its lines therefore read as template, not as the builder's. This is
   0001's open question 1b, now visible in coverage. Until it's decided, a relabel ("I wrote
   this") is the fix.
+  **Changed 2026-10-02 (Claude's call, open to change):** for *lines*, a root commit by an
+  identity you said is yours now reads "not confirmed" rather than "template", and asks to be
+  relabelled. Dependency questions keep 0003's rule (every root commit is a template), so a
+  scaffold's packages are still never asked about. Line authorship is now version 2; older
+  sightings are re-attributed the next time the project is opened.
 - **Checked in a real browser**, against the test database with a demo project, through the
   whole flow: the identity question, ticking SQL and Docker, coverage with before- and
   after-goal sightings, the code view opening under its row with every line's author and the

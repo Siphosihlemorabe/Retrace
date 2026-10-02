@@ -5,19 +5,29 @@
  * lines they cover. Nothing is guessed from how code looks.
  */
 import {
-  AUTHORSHIP_VERSION,
   classifyCommit,
   type Authorship,
   type CommitAuthorship,
   type IdentitySet,
 } from '../detect/authorship.js';
-import { blameLines, commitMeta, rootShas, type Repo } from '../git/index.js';
+import { blameOrigins, commitMeta, rootShas, type Repo } from '../git/index.js';
 
-export { AUTHORSHIP_VERSION };
+/**
+ * Line authorship's own version, stored on every sighting. 0003's commit
+ * classifier underneath stays v1 for dependency questions.
+ *
+ * v2: a root commit by an identity you said is yours reads "not confirmed"
+ * rather than "template" (an imported project's first commit is often your own
+ * code), and relabels follow the lines to later commits.
+ */
+export const AUTHORSHIP_VERSION = 2;
 
 export interface LineAuthor {
   line: number;
+  /** The commit that wrote the line, and where the line sat in it. */
   sha: string;
+  originLine: number;
+  originPath: string;
   authorship: Authorship;
   actor: string | null;
   /** True when the builder's relabel decided this line, not commit history. */
@@ -47,19 +57,38 @@ export class CommitClassifier {
     if (hit === undefined) {
       this.roots ??= rootShas(this.repo);
       const roots = this.roots;
-      hit = (async () => classifyCommit(await commitMeta(this.repo, sha), (await roots).has(sha), this.identities))();
+      hit = (async () => {
+        const meta = await commitMeta(this.repo, sha);
+        const by = classifyCommit(meta, (await roots).has(sha), this.identities);
+        // 0003 calls every root commit a template, so scaffolded dependencies are
+        // never asked about. For lines that overstates it the other way: the first
+        // commit of a project you imported is often your own code. Said plainly
+        // instead: not confirmed, and you can say "I wrote these".
+        if (by.rule === 'root commit' && this.identities.mine.has(meta.authorEmail.trim().toLowerCase())) {
+          return { authorship: 'unknown', rule: 'your root commit: a scaffold or your own code', actor: 'first commit, author not confirmed' };
+        }
+        return by;
+      })();
       this.cache.set(sha, hit);
     }
     return hit;
   }
 }
 
+/**
+ * A label covers a line when it names the commit that wrote it and the line's
+ * place there, so it holds in every later commit that leaves the line alone.
+ * Labels stored before that (by the commit being viewed) still match there.
+ */
+const covers = (x: LineLabel, l: LineAuthor, viewSha: string, viewPath: string) =>
+  (x.sha === l.sha && x.path === l.originPath && l.originLine >= x.lineStart && l.originLine <= x.lineEnd) ||
+  (x.sha === viewSha && x.path === viewPath && l.line >= x.lineStart && l.line <= x.lineEnd);
+
 function applyLabels(lines: LineAuthor[], labels: readonly LineLabel[], sha: string, path: string): LineAuthor[] {
-  const mine = labels.filter((l) => l.sha === sha && l.path === path);
-  if (mine.length === 0) return lines;
+  if (labels.length === 0) return lines;
   return lines.map((l) => {
     // The most recent relabel covering the line wins: labels arrive oldest first.
-    const label = [...mine].reverse().find((x) => l.line >= x.lineStart && l.line <= x.lineEnd);
+    const label = [...labels].reverse().find((x) => covers(x, l, sha, path));
     if (label === undefined) return l;
     return {
       ...l,
@@ -80,13 +109,21 @@ export async function blameAuthors(
   end: number,
   labels: readonly LineLabel[] = [],
 ): Promise<LineAuthor[]> {
-  const blamed = await blameLines(repo, sha, path, start, end);
+  const blamed = await blameOrigins(repo, sha, path, start, end);
   const lines: LineAuthor[] = [];
   for (let n = start; n <= end; n += 1) {
-    const lineSha = blamed.get(n);
-    if (lineSha === undefined) continue;
-    const by = await classifier.classify(lineSha);
-    lines.push({ line: n, sha: lineSha, authorship: by.authorship, actor: by.actor, relabelled: false });
+    const origin = blamed.get(n);
+    if (origin === undefined) continue;
+    const by = await classifier.classify(origin.sha);
+    lines.push({
+      line: n,
+      sha: origin.sha,
+      originLine: origin.line,
+      originPath: origin.path,
+      authorship: by.authorship,
+      actor: by.actor,
+      relabelled: false,
+    });
   }
   return applyLabels(lines, labels, sha, path);
 }
@@ -106,7 +143,7 @@ export async function commitAuthors(
   const by = await classifier.classify(sha);
   const lines: LineAuthor[] = [];
   for (let n = start; n <= end; n += 1) {
-    lines.push({ line: n, sha, authorship: by.authorship, actor: by.actor, relabelled: false });
+    lines.push({ line: n, sha, originLine: n, originPath: path, authorship: by.authorship, actor: by.actor, relabelled: false });
   }
   return applyLabels(lines, labels, sha, path);
 }

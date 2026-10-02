@@ -388,3 +388,30 @@ export async function blobSha(repo: Repo, sha: string, path: string): Promise<st
   const out = (await gitAllowFail(repo, ['rev-parse', `${sha}:${path}`])).trim();
   return /^[0-9a-f]{40}$/.test(out) ? out : null;
 }
+
+export interface LineOrigin {
+  /** The commit that last changed the line. */
+  sha: string;
+  /** The line's number and path in that commit: stable across later commits that leave it alone. */
+  line: number;
+  path: string;
+}
+
+/** Blame with each line's origin: commit, line number and path there. */
+export async function blameOrigins(repo: Repo, sha: string, path: string, start: number, end: number): Promise<Map<number, LineOrigin>> {
+  const out = await git(repo, ['blame', '--line-porcelain', '-L', `${start},${end}`, sha, '--', path]);
+  const result = new Map<number, LineOrigin>();
+  let current: { sha: string; line: number; final: number } | null = null;
+  for (const row of out.split('\n')) {
+    const header = /^([0-9a-f]{40}) (\d+) (\d+)/.exec(row);
+    if (header !== null) {
+      current = { sha: header[1] as string, line: Number(header[2]), final: Number(header[3]) };
+      continue;
+    }
+    if (current !== null && row.startsWith('filename ')) {
+      result.set(current.final, { sha: current.sha, line: current.line, path: row.slice('filename '.length) });
+      current = null;
+    }
+  }
+  return result;
+}

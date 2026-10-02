@@ -10,7 +10,7 @@
  *
  * Every result is a pointer (repo, SHA, path, lines), never code (G11).
  */
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, lt } from 'drizzle-orm';
 
 import {
   commitSightings,
@@ -24,6 +24,7 @@ import type { Db } from '../../db/types.js';
 import { loadIdentitySet } from '../decisions/identity.js';
 import {
   addedLines,
+  blameOrigins,
   commitMeta,
   commitPositions,
   filesAt,
@@ -153,6 +154,7 @@ export async function snapshotScan(scope: ScanScope, target: Target): Promise<nu
  */
 export async function scanNewCommits(scope: ScanScope): Promise<{ commits: number; sightings: number }> {
   const { db, repo, repoId } = scope;
+  await reattributeStale(scope);
   const target = await goalOutcomes(db, scope.userId, repoId);
   if (target.defs.length === 0) return { commits: 0, sightings: 0 };
 
@@ -231,36 +233,69 @@ async function recordSighting(
 }
 
 /**
- * The builder relabels lines ("an AI wrote this"). Stored, then every
- * sighting it overlaps at that commit is re-attributed, so coverage changes at
- * once rather than at the next scan.
+ * The builder relabels lines ("an AI wrote this"). The label is stored against
+ * the commit that wrote each line (from blame), so it holds in every later
+ * commit that leaves those lines alone. Then every sighting of that file is
+ * re-attributed, so coverage changes at once rather than at the next scan.
  */
 export async function relabelLines(
   scope: ScanScope,
   label: { sha: string; path: string; lineStart: number; lineEnd: number; label: 'agent' | 'me' },
 ): Promise<number> {
   const { db, repo, repoId } = scope;
-  await db.insert(lineLabels).values({ userId: scope.userId, repoId, ...label });
+  const origins = await blameOrigins(repo, label.sha, label.path, label.lineStart, label.lineEnd);
 
-  const affected = (
-    await db
-      .select()
-      .from(outcomeSightings)
-      .where(and(eq(outcomeSightings.repoId, repoId), eq(outcomeSightings.sha, label.sha), eq(outcomeSightings.path, label.path)))
-  ).filter((s) => s.lineStart <= label.lineEnd && s.lineEnd >= label.lineStart);
-  if (affected.length === 0) return 0;
+  // Consecutive lines from the same commit and file become one row.
+  const rows: { sha: string; path: string; lineStart: number; lineEnd: number }[] = [];
+  for (let n = label.lineStart; n <= label.lineEnd; n += 1) {
+    const o = origins.get(n);
+    if (o === undefined) continue;
+    const last = rows.at(-1);
+    if (last !== undefined && last.sha === o.sha && last.path === o.path && last.lineEnd + 1 === o.line) last.lineEnd = o.line;
+    else rows.push({ sha: o.sha, path: o.path, lineStart: o.line, lineEnd: o.line });
+  }
+  // Blame found nothing (the file isn't at that commit): keep the old meaning.
+  if (rows.length === 0) rows.push({ sha: label.sha, path: label.path, lineStart: label.lineStart, lineEnd: label.lineEnd });
+  await db.insert(lineLabels).values(rows.map((r) => ({ userId: scope.userId, repoId, label: label.label, ...r })));
 
+  const paths = [...new Set([label.path, ...rows.map((r) => r.path)])];
+  const sightings = await db
+    .select()
+    .from(outcomeSightings)
+    .where(and(eq(outcomeSightings.repoId, repoId), inArray(outcomeSightings.path, paths)));
+  return reattribute(scope, sightings);
+}
+
+/**
+ * Sightings recorded under an older way of telling who wrote code are worked
+ * out again, once, when the project is next opened.
+ */
+export async function reattributeStale(scope: ScanScope): Promise<number> {
+  const stale = await scope.db
+    .select()
+    .from(outcomeSightings)
+    .where(and(eq(outcomeSightings.repoId, scope.repoId), lt(outcomeSightings.authorshipVersion, AUTHORSHIP_VERSION)));
+  return reattribute(scope, stale);
+}
+
+/** Who wrote each sighting's lines, worked out again. Returns how many changed. */
+async function reattribute(scope: ScanScope, sightings: (typeof outcomeSightings.$inferSelect)[]): Promise<number> {
+  if (sightings.length === 0) return 0;
+  const { db, repo, repoId } = scope;
   const classifier = new CommitClassifier(repo, await loadIdentitySet(db, scope.userId));
   const labels = await labelsFor(db, repoId);
-  for (const s of affected) {
+  let changed = 0;
+  for (const s of sightings) {
     const authors =
       s.scanKind === 'commit'
         ? await commitAuthors(classifier, s.sha, s.path, s.lineStart, s.lineEnd, labels)
         : await blameAuthors(repo, classifier, s.sha, s.path, s.lineStart, s.lineEnd, labels);
+    const authorship = dominantAuthorship(authors);
+    if (authorship !== s.authorship) changed += 1;
     await db
       .update(outcomeSightings)
-      .set({ authorship: dominantAuthorship(authors) })
-      .where(inArray(outcomeSightings.id, [s.id]));
+      .set({ authorship, authorshipVersion: AUTHORSHIP_VERSION })
+      .where(eq(outcomeSightings.id, s.id));
   }
-  return affected.length;
+  return changed;
 }
