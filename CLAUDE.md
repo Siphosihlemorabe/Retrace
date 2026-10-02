@@ -300,8 +300,7 @@ usable on its own:
 
 1. ~~0007 — Project goals and learning outcomes~~: **built** (2026-10-01)
 2. ~~[0009 — Detailed questions, and lists for any skill](./docs/features/0009-model-questions.md)~~:
-   **built** (2026-10-02), except the manual ten-target check with a real model, which
-   needs the builder's consent on a real project
+   **built** (2026-10-02), including the ten-question check with a real model (8 of 10)
 3. [0010 — Documenting](./docs/features/0010-documenting.md): line notes, then a check for
    tradeoffs and alternatives
 4. [0011 — Practice and check](./docs/features/0011-practice-and-check.md): a judge that

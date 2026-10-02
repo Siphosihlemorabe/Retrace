@@ -182,9 +182,8 @@ with `source: builder`.
 - [x] Cache hit, version bump, a malformed result rejected and the fallback used, caps
 - [x] Copy checks: no model answer shown; key points never shown in this feature (the API
       test asserts no `keyPoints` reach the page; the prompt asks for questions only)
-- [ ] **Manual:** ten real targets. *Not run: it sends real code to the builder's model,
-      which needs their consent on a real project.* Is each question only askable of *this* code, and is every
-      line reference right? Target 8 of 10
+- [x] **Manual:** ten real targets. Is each question only askable of *this* code, and is every
+      line reference right? Target 8 of 10. **Result: 8 of 10** (see "Ten-question check" below)
 
 **Not deliverables, on purpose:** judging (0011), notes (0010), learned status, the profile,
 generation on push.
@@ -264,6 +263,36 @@ for practice, which is why nothing here counts. Counting starts at 0011's check.
 - **Clicked through on a scratch repo** (no model, then `claude-cli` without consent): the
   Goals review, Ask card, consent banner and Settings all worked. No model calls were made.
   Three wording fixes came out of it.
+
+## Ten-question check (2026-10-02)
+
+Run on **Retrace's own repo**, chosen because its code was already being shared with
+Anthropic while it was built, so nothing new left the machine. The builder's Claude Code
+was the model, with SQL and Node/REST API goals, against the test database. Ten calls,
+cents in total. Judged by Claude against the spec's test; worth a second look by the
+builder.
+
+| # | Outcome | Code | Verdict |
+|---|---|---|---|
+| 1 | Filtering and sorting | partial index, migration 0000:324 | Pass on the test; the outcome was wrong (see fix 4) |
+| 2 | Indexes | the same line | **Fail:** text says "lines 323–329" for an index on 324, and it repeats #1's line |
+| 3 | Constraints | `analysis_cache` PK and UNIQUE | Pass: two workers missing the cache at once |
+| 4 | Migrations | hand-added `citext` | Pass: what happens if 0000 is regenerated |
+| 5 | Aggregates | `min()` over a filtered subquery | Pass: NULL versus COUNT's 0 |
+| 6 | Subqueries | the cascade-delete trigger's EXISTS | Pass |
+| 7 | Transactions | the append-only trigger | Pass: what happens to 500 earlier inserts |
+| 8 | Upserts | `ON CONFLICT DO NOTHING` seed | Pass: an edited seed never reaches existing databases |
+| 9 | Joins | `listDecisions`' left join | Pass |
+| 10 | Structured logging | a test fixture mentioning `pino` | **Fail:** not the builder's logging at all |
+
+Every key point was a short phrase with correct lines, and none gave a model answer to copy.
+Fixes that came out of it:
+1. A question whose text names lines outside what it and its key points cover falls back
+   to the rule-based question.
+2. The queue asks about one stretch of code once per round, however many outcomes it
+   touches.
+3. Test files touch only test outcomes (detectors v2).
+4. A partial index's `WHERE` is an index, not filtering (detectors v2).
 
 ## Open questions
 
