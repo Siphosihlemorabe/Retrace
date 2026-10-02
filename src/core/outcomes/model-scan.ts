@@ -120,7 +120,7 @@ export async function modelScan(
   const [goal] = await db
     .select({ openedAt: learningGoals.openedAt })
     .from(learningGoals)
-    .where(and(eq(learningGoals.userId, userId), eq(learningGoals.repoId, repoId), eq(learningGoals.skillId, skillId), eq(learningGoals.kind, 'intent')));
+    .where(and(eq(learningGoals.userId, userId), eq(learningGoals.repoId, repoId), eq(learningGoals.skillId, skillId), eq(learningGoals.kind, 'intent'), ne(learningGoals.status, 'abandoned')));
   if (goal === undefined) return { ok: false, reason: 'no_goal', message: 'This project has no goal for that skill.' };
 
   const rows = await db

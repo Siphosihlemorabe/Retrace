@@ -72,6 +72,7 @@ export const api = {
   setGoals: (repoId: string, goals: { name: string; objective: 'all' | string[] }[]) =>
     post<SetGoalsResponse>(`/api/repos/${repoId}/goals`, { goals }),
   scan: (repoId: string) => post<ScanResponse>(`/api/repos/${repoId}/scan`),
+  stopGoal: (repoId: string, goalId: string) => post<{ ok: true }>(`/api/repos/${repoId}/goals/${goalId}/stop`),
   coverage: (repoId: string) => request<CoverageResponse>(`/api/repos/${repoId}/coverage`),
   code: (repoId: string, sha: string, path: string) =>
     request<CodeViewResponse>(`/api/repos/${repoId}/code?sha=${sha}&path=${encodeURIComponent(path)}`),

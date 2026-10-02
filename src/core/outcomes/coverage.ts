@@ -10,7 +10,7 @@
  *
  * There is no number for the person, only for a goal in a project (G2).
  */
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
 
 import {
   learningGoalOutcomes,
@@ -138,7 +138,7 @@ export async function loadCoverage(db: Db, userId: string, repoId: string): Prom
     })
     .from(learningGoals)
     .innerJoin(skills, eq(skills.id, learningGoals.skillId))
-    .where(and(eq(learningGoals.userId, userId), eq(learningGoals.repoId, repoId), eq(learningGoals.kind, 'intent')))
+    .where(and(eq(learningGoals.userId, userId), eq(learningGoals.repoId, repoId), eq(learningGoals.kind, 'intent'), ne(learningGoals.status, 'abandoned')))
     .orderBy(learningGoals.openedAt);
   if (goals.length === 0) return [];
 

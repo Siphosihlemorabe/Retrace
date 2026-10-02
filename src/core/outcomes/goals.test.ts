@@ -15,7 +15,7 @@ import { recordIdentity } from '../decisions/identity.js';
 import { ensureBuilder, registerLocalClone } from '../decisions/local.js';
 import { openRepo, type Repo } from '../git/index.js';
 import { loadCoverage, type GoalCoverage } from './coverage.js';
-import { setGoals, setObjective } from './goals.js';
+import { setGoals, setObjective, stopGoal } from './goals.js';
 import { relabelLines, scanNewCommits, type ScanScope } from './scan.js';
 import { outcomesOf, resolveSkill } from './sync.js';
 
@@ -148,5 +148,17 @@ describe.skipIf(skipWithoutDatabase())('goals, scanning and coverage', () => {
     const all = await loadCoverage(db, scope.userId, scope.repoId);
     const redis = all.find((g) => g.skill.slug === 'redis');
     expect(redis).toMatchObject({ hasOutcomeList: false, percentLearned: null, total: 0 });
+  });
+
+  test('stopping a goal hides it and keeps its history; setting it again brings the same goal back', async () => {
+    const before = await sql();
+    expect(await stopGoal(scope, before.goalId)).toBe(true);
+    expect((await loadCoverage(db, scope.userId, scope.repoId)).some((g) => g.skill.slug === 'sql')).toBe(false);
+
+    await setGoals(scope, [{ name: 'SQL', objective: 'all' }]);
+    const after = await sql();
+    expect(after.goalId).toBe(before.goalId);
+    expect(after.declaredAtSha).toBe(before.declaredAtSha);
+    expect(after.touched).toBe(before.touched);
   });
 });

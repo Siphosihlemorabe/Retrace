@@ -106,7 +106,7 @@ export interface SetGoalsResponse {
   declaredAtSha: string;
   backfilled: number;
   alreadyTouched: number;
-  goals: { goalId: string; skill: string; created: boolean; hasOutcomeList: boolean }[];
+  goals: { goalId: string; skill: string; created: boolean; reopened: boolean; hasOutcomeList: boolean }[];
 }
 
 export interface ScanResponse {

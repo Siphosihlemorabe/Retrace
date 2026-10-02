@@ -12,7 +12,7 @@ import { parseArgs } from 'node:util';
 
 import { registerLocalClone } from '../core/decisions/local.js';
 import { BUILTIN_SKILLS, findBuiltinSkill } from '../core/outcomes/catalog/index.js';
-import { setGoals, type GoalRequest } from '../core/outcomes/goals.js';
+import { goalsFor, setGoals, stopGoal, type GoalRequest } from '../core/outcomes/goals.js';
 import { commitPositions, GitError, openRepo } from '../core/git/index.js';
 import { createGithubRepo, createProjectFolder, githubCliReady } from '../core/git/new-project.js';
 import { openSession, SetupError } from '../session.js';
@@ -24,6 +24,7 @@ Usage: npm run goals <path-to-repo> [options]
 
   --new            create <path> as a new project (folder, git init, first commit)
   --skill <name>   set a goal without questions (repeatable); every outcome ticked
+  --stop <name>    stop tracking a goal (repeatable); its history is kept, and setting it again brings it back
 `.trim();
 
 async function main(argv: string[]): Promise<number> {
@@ -33,6 +34,7 @@ async function main(argv: string[]): Promise<number> {
     options: {
       new: { type: 'boolean', default: false },
       skill: { type: 'string', multiple: true },
+      stop: { type: 'string', multiple: true },
       help: { type: 'boolean', default: false },
     },
   });
@@ -51,6 +53,19 @@ async function main(argv: string[]): Promise<number> {
       await offerGithub(prompt, repo);
     }
     const clone = await registerLocalClone(session.db, repo);
+
+    if (values.stop !== undefined && values.stop.length > 0) {
+      const scope = { db: session.db, userId: session.userId, repoId: clone.id };
+      const goals = await goalsFor(scope);
+      for (const name of values.stop) {
+        const want = (findBuiltinSkill(name)?.name ?? name).trim().toLowerCase();
+        const goal = goals.find((g) => g.title.trim().toLowerCase() === want);
+        if (goal === undefined || !(await stopGoal(scope, goal.id))) console.log(`  No goal for ${name} in this project.`);
+        else console.log(`  Stopped tracking ${goal.title}. Its history is kept; set it again to bring it back.`);
+      }
+      return 0;
+    }
+
     await identitySetup(session, repo, clone, prompt);
 
     const requests =
@@ -71,7 +86,7 @@ async function main(argv: string[]): Promise<number> {
       const name = findBuiltinSkill(g.skill)?.name ?? g.skill;
       console.log(
         `    ${name}${g.created ? '' : ' (updated)'}` +
-          (g.hasOutcomeList ? '' : ' — its outcome list will be drafted for you to review (coming in 0009)'),
+          (g.hasOutcomeList ? '' : ' — no built-in outcome list: draft and review one on the Goals page (npm run ui)'),
       );
     }
     if (result.alreadyTouched > 0) {

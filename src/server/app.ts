@@ -30,7 +30,7 @@ import { createGithubRepo, createProjectFolder, githubCliReady } from '../core/g
 import { BUILTIN_SKILLS } from '../core/outcomes/catalog/index.js';
 import { codeView } from '../core/outcomes/code-view.js';
 import { loadCoverage } from '../core/outcomes/coverage.js';
-import { setGoals } from '../core/outcomes/goals.js';
+import { setGoals, stopGoal } from '../core/outcomes/goals.js';
 import { relabelLines, scanNewCommits } from '../core/outcomes/scan.js';
 import { draftOutcomes, DraftOutcome, saveOutcomeList } from '../core/outcomes/draft.js';
 import { modelScan } from '../core/outcomes/model-scan.js';
@@ -360,6 +360,13 @@ export function createApp({ db, userId, login }: AppOptions): Hono {
     const { goals } = await body(c, GoalsBody);
     const result = await setGoals(scope, goals);
     return c.json<SetGoalsResponse>(result, 201);
+  });
+
+  // Stopping keeps the goal's history; setting the same skill again brings it back.
+  app.post('/api/repos/:id/goals/:goalId/stop', async (c) => {
+    const { clone } = await cloneOr404(id(c));
+    if (!(await stopGoal({ db, userId, repoId: clone.id }, id(c, 'goalId')))) throw new NotFound('No such goal.');
+    return c.json({ ok: true });
   });
 
   app.post('/api/repos/:id/scan', async (c) => {

@@ -182,7 +182,10 @@ function GoalCard(props: { repoId: string; goal: Goal; positions: Record<string,
         <div className="goal-head">
           <div className="skill-icon">{goal.skill.name.slice(0, 2)}</div>
           <div>
-            <h2>{goal.skill.name}</h2>
+            <div className="goal-title">
+              <h2>{goal.skill.name}</h2>
+              <StopGoal repoId={repoId} goal={goal} onStopped={props.onRelabelled} />
+            </div>
             <p className="muted">There is no built-in list of what {goal.skill.name} breaks into. Draft one and review it.</p>
           </div>
         </div>
@@ -203,6 +206,7 @@ function GoalCard(props: { repoId: string; goal: Goal; positions: Record<string,
           <div className="goal-title">
             <h2>{goal.skill.name}</h2>
             <span className="muted small">out of {goal.total} outcome{goal.total === 1 ? '' : 's'}</span>
+            <StopGoal repoId={repoId} goal={goal} onStopped={props.onRelabelled} />
           </div>
           <div className="stats">
             <div className="stat">
@@ -423,6 +427,34 @@ function GoalsEditor(props: { repoId: string; existing: Goal[]; onCancel: (() =>
 }
 
 // ---------------------------------------------------------------------------
+
+/** Two clicks, no browser dialog. Nothing is deleted, and the copy says so. */
+function StopGoal(props: { repoId: string; goal: Goal; onStopped: () => void }) {
+  const [asking, setAsking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!asking) {
+    return (
+      <button className="btn-ghost small-btn push-right" onClick={() => setAsking(true)}>
+        Stop tracking
+      </button>
+    );
+  }
+  return (
+    <span className="actions push-right">
+      <span className="muted small">Stop tracking {props.goal.skill.name} here? Its history is kept; add it again to bring it back.</span>
+      <button
+        className="small-btn"
+        onClick={() => void api.stopGoal(props.repoId, props.goal.goalId).then(props.onStopped, (e: Error) => setError(e.message))}
+      >
+        Stop
+      </button>
+      <button className="quiet small-btn" onClick={() => setAsking(false)}>
+        Keep
+      </button>
+      {error !== null && <span className="error small">{error}</span>}
+    </span>
+  );
+}
 
 // --- 0009: outcome lists for any skill ----------------------------------------
 

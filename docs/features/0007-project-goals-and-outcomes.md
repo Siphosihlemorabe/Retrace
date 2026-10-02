@@ -327,6 +327,12 @@ must read as *what to work on next*, never as a verdict (G5).
   code at commit N". Found in the browser check: it had read as if the agent wrote it then.
 - **No way to remove a goal yet.** Goals can be added and objectives edited. Removing a whole
   skill from a project is not built, because nothing in the product direction asks for it.
+  **Changed 2026-10-02 (Claude's call, open to change):** "Stop tracking" (Goals tab, or
+  `npm run goals <dir> -- --stop SQL`) marks the goal abandoned. Nothing is deleted: its
+  objective history and sightings stay, its open questions are retired, and setting the same
+  skill again brings the same goal back, re-reading the code so nothing written while it was
+  stopped is missed (that code reads as "before the goal", which understates rather than
+  overstates).
 - **A custom skill's `kind` is stored as "technology"**, because `skills.kind` is required and
   the taxonomy question in `CLAUDE.md` is still open.
 

@@ -97,7 +97,7 @@ async function targets(db: Db, userId: string, repoId: string, want: number): Pr
     .innerJoin(learningGoals, eq(learningGoals.id, learningGoalOutcomes.goalId))
     .innerJoin(skillOutcomes, eq(skillOutcomes.id, learningGoalOutcomes.outcomeId))
     .innerJoin(skills, eq(skills.id, skillOutcomes.skillId))
-    .where(and(eq(learningGoals.userId, userId), eq(learningGoals.repoId, repoId), eq(learningGoals.kind, 'intent'), isNull(skillOutcomes.retiredAt)));
+    .where(and(eq(learningGoals.userId, userId), eq(learningGoals.repoId, repoId), eq(learningGoals.kind, 'intent'), ne(learningGoals.status, 'abandoned'), isNull(skillOutcomes.retiredAt)));
   const byOutcome = new Map(goalOutcomes.map((o) => [o.outcomeId, o]));
 
   const sightings = goalOutcomes.length === 0 ? [] : await db

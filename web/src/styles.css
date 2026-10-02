@@ -937,6 +937,10 @@ input.narrow {
   min-width: 0;
 }
 
+.push-right {
+  margin-left: auto;
+}
+
 /* --- Small screens --------------------------------------------------------- */
 
 @media (max-width: 720px) {

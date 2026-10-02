@@ -10,7 +10,7 @@
  *
  * Every result is a pointer (repo, SHA, path, lines), never code (G11).
  */
-import { and, eq, inArray, lt } from 'drizzle-orm';
+import { and, eq, inArray, lt, ne } from 'drizzle-orm';
 
 import {
   commitSightings,
@@ -76,6 +76,7 @@ export async function goalOutcomes(db: Db, userId: string, repoId: string): Prom
         eq(learningGoals.userId, userId),
         eq(learningGoals.repoId, repoId),
         eq(learningGoals.kind, 'intent'),
+        ne(learningGoals.status, 'abandoned'),
         eq(skillOutcomes.source, 'builtin'),
       ),
     );
