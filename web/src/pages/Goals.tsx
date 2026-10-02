@@ -202,7 +202,7 @@ function GoalCard(props: { repoId: string; goal: Goal; positions: Record<string,
         <div className="goal-summary">
           <div className="goal-title">
             <h2>{goal.skill.name}</h2>
-            <span className="muted small">out of {goal.total} outcomes</span>
+            <span className="muted small">out of {goal.total} outcome{goal.total === 1 ? '' : 's'}</span>
           </div>
           <div className="stats">
             <div className="stat">

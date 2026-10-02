@@ -247,7 +247,9 @@ function OutcomeCard(props: { card: Card; position: number; limit: number; onNex
         </>
       ) : (
         card.outcome !== null && (
-          <p className="muted">In your objective, and nothing in the code touches it yet: {card.outcome.description}</p>
+          <p className="muted">
+            {card.outcome.name}: {card.outcome.description}
+          </p>
         )
       )}
 

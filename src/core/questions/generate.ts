@@ -64,11 +64,13 @@ const WHO: Record<Authorship, string> = {
 // Rule-based questions: specific about *where*, general about *why*.
 // ---------------------------------------------------------------------------
 
+const linesOf = (a: number, b: number) => (a === b ? `line ${a}` : `lines ${a}–${b}`);
+
 export function ruleQuestion(target: Target): string {
   switch (target.kind) {
     case 'outcome_sighting': {
       const who = target.authorship === 'agent' ? 'Your agent wrote' : target.authorship === 'builder' || target.authorship === 'builder_with_agent' ? 'You wrote' : 'There is';
-      return `${who} ${target.outcome.name.toLowerCase()} code in ${target.path}, lines ${target.lineStart}–${target.lineEnd}. What happens there when the data is not what the code expects, and what does this way of writing it cost compared with the alternatives?`;
+      return `${who} ${target.outcome.name.toLowerCase()} code in ${target.path}, ${linesOf(target.lineStart, target.lineEnd)}. What happens there when the data is not what the code expects, and what does this way of writing it cost compared with the alternatives?`;
     }
     case 'outcome_untouched':
       return `Your objective for this project includes ${target.outcome.name} (${target.outcome.description}), and nothing in the code touches it yet. Where in this project would it matter most, and what would adding it cost?`;
