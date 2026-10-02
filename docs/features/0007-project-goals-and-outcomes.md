@@ -335,6 +335,10 @@ must read as *what to work on next*, never as a verdict (G5).
   overstates).
 - **A custom skill's `kind` is stored as "technology"**, because `skills.kind` is required and
   the taxonomy question in `CLAUDE.md` is still open.
+  **Changed 2026-10-02 (Claude's call, open to change):** when a list is drafted, the model
+  proposes a kind (technology, language, concept or practice). The review screen shows it as a
+  choice, and saving the list stores the builder's answer. Postgres-versus-SQL resolution is
+  still open.
 
 ## Open questions
 

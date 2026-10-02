@@ -88,8 +88,8 @@ export const api = {
   practice: (id: string, answer: string) => post<{ ok: true }>(`/api/questions/${id}/answer`, { answer }),
   skipQuestion: (id: string) => post<SkipResponse>(`/api/questions/${id}/skip`),
   draftOutcomes: (skill: string) => post<DraftOutcomesResponse>(`/api/skills/${encodeURIComponent(skill)}/draft`),
-  saveOutcomes: (skill: string, outcomes: { name: string; description: string; lookFor: string[]; slug?: string }[]) =>
-    put<SavedOutcomesResponse>(`/api/skills/${encodeURIComponent(skill)}/outcomes`, { outcomes }),
+  saveOutcomes: (skill: string, outcomes: { name: string; description: string; lookFor: string[]; slug?: string }[], kind: string) =>
+    put<SavedOutcomesResponse>(`/api/skills/${encodeURIComponent(skill)}/outcomes`, { outcomes, kind }),
   modelScan: (repoId: string, skill: string) => post<ModelScanResponse>(`/api/repos/${repoId}/model-scan`, { skill }),
 };
 

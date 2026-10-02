@@ -471,6 +471,7 @@ const rowOk = (row: Row) => row.name.trim().length >= 2 && row.description.trim(
 /** Draft, edit, save. Nothing is used until the builder saves it. */
 function OutcomeListReview(props: { skill: { slug: string; name: string }; onSaved: () => void }) {
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [kind, setKind] = useState('technology');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -480,7 +481,10 @@ function OutcomeListReview(props: { skill: { slug: string; name: string }; onSav
     try {
       const r = await api.draftOutcomes(props.skill.slug);
       if (r.outcomes === null) setError(r.message ?? 'No model could draft a list.');
-      else setRows(r.outcomes.map((o) => ({ name: o.name, description: o.description, cues: o.lookFor.join(', ') })));
+      else {
+        setRows(r.outcomes.map((o) => ({ name: o.name, description: o.description, cues: o.lookFor.join(', ') })));
+        if (r.kind !== null) setKind(r.kind);
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -495,6 +499,7 @@ function OutcomeListReview(props: { skill: { slug: string; name: string }; onSav
       await api.saveOutcomes(
         props.skill.slug,
         rows.map((r) => ({ name: r.name.trim(), description: r.description.trim(), lookFor: cuesOf(r) })),
+        kind,
       );
       props.onSaved();
     } catch (e) {
@@ -522,6 +527,15 @@ function OutcomeListReview(props: { skill: { slug: string; name: string }; onSav
         Edit anything, remove what doesn’t belong, add what’s missing. “Look for” is text that appears in code when
         the outcome is touched, separated by commas. Only files containing it are read by the model.
       </p>
+      <label className="field inline">
+        <span>{props.skill.name} is a</span>
+        <select value={kind} onChange={(e) => setKind(e.target.value)}>
+          <option value="technology">technology (a tool, database or framework)</option>
+          <option value="language">language</option>
+          <option value="concept">concept (an idea across tools)</option>
+          <option value="practice">practice (a way of working)</option>
+        </select>
+      </label>
       <ul className="review-list">
         {rows.map((r, i) => (
           <li key={i} className="review-row">

@@ -937,6 +937,12 @@ input.narrow {
   min-width: 0;
 }
 
+.field.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
 .push-right {
   margin-left: auto;
 }

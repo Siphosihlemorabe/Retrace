@@ -25,6 +25,7 @@ const ME = { name: 'Me', email: 'model-outcomes-me@example.com' };
 const AGENT = { name: 'gpt-engineer-app[bot]', email: '159125892+gpt-engineer-app[bot]@users.noreply.github.com' };
 
 const DRAFT = {
+  kind: 'technology',
   outcomes: [
     { name: 'Caching with TTLs', description: 'Store values that expire on their own', lookFor: ['EX:', 'setex', 'expire('] },
     { name: 'Cache invalidation', description: 'Remove or update cached values when the source changes', lookFor: ['.del('] },
@@ -113,7 +114,9 @@ describe.skipIf(skipWithoutDatabase())('outcome lists for any skill', () => {
     const reviewed = DRAFT.outcomes.filter((o) => o.name !== 'Persistence').map((o) => (o.name === 'Streams' ? { ...o, name: 'Redis Streams' } : o));
     const [goal] = await db.select({ skillId: learningGoals.skillId }).from(learningGoals).where(eq(learningGoals.id, cov0!.goalId));
     skillId = goal!.skillId!;
-    const saved = await saveOutcomeList(db, skillId, reviewed);
+    const saved = await saveOutcomeList(db, skillId, reviewed, 'concept');
+    const [skill] = await db.select({ kind: skills.kind }).from(skills).where(eq(skills.id, skillId));
+    expect(skill?.kind).toBe('concept');
     expect(saved).toMatchObject({ added: 5, retired: 0 });
     expect(saved.slugs).toContain('keydb.redis-streams');
 

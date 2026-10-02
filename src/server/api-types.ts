@@ -201,6 +201,8 @@ export interface SkipResponse {
 }
 
 export interface DraftOutcomesResponse {
+  /** What kind of skill the model thinks it is; the builder confirms it. */
+  kind: 'technology' | 'language' | 'concept' | 'practice' | null;
   /** Null when no model could draft one; `reason` says why. */
   outcomes: { name: string; description: string; lookFor: string[] }[] | null;
   reason: 'off' | 'capped' | 'failed' | null;

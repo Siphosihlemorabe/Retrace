@@ -11,11 +11,12 @@ import type { Db } from '../../db/types.js';
 import { completeJson, providerFromEnv, type JsonResult, type Provider } from '../llm/index.js';
 import { setObjective } from './goals.js';
 
-export const OUTCOME_DRAFT_VERSION = 1;
+/** v2: also proposes what kind of skill it is. */
+export const OUTCOME_DRAFT_VERSION = 2;
 
 export const OUTCOME_DRAFT_SYSTEM = `You break a skill a developer wants to learn into learning outcomes they could show in their own code.
 
-You are given the skill's name. List 6 to 12 outcomes, from foundational to advanced. Each outcome:
+You are given the skill's name. Say what kind of skill it is: "technology" (a tool, database or framework), "language", "concept" (an idea that spans tools, such as caching), or "practice" (a way of working, such as testing). Then list 6 to 12 outcomes, from foundational to advanced. Each outcome:
 - is something a developer does in code, not something they read about
 - has a short name (under 6 words)
 - has a one-line description of what doing it well looks like (under 20 words)
@@ -24,7 +25,7 @@ You are given the skill's name. List 6 to 12 outcomes, from foundational to adva
 Do not teach, explain, or give examples beyond the cues.
 
 Reply with JSON only, in exactly this shape:
-{"outcomes":[{"name":"…","description":"…","lookFor":["…"]}]}`;
+{"kind":"technology","outcomes":[{"name":"…","description":"…","lookFor":["…"]}]}`;
 
 const Cue = z.string().trim().min(3).max(40);
 
@@ -35,7 +36,10 @@ export const DraftOutcome = z.object({
 });
 export type DraftOutcome = z.infer<typeof DraftOutcome>;
 
-export const DraftOutput = z.object({ outcomes: z.array(DraftOutcome).min(6).max(12) });
+export const SKILL_KINDS = ['technology', 'language', 'concept', 'practice'] as const;
+export type SkillKind = (typeof SKILL_KINDS)[number];
+
+export const DraftOutput = z.object({ kind: z.enum(SKILL_KINDS), outcomes: z.array(DraftOutcome).min(6).max(12) });
 
 /** A draft for the builder to review. Nothing is saved. */
 export async function draftOutcomes(
@@ -82,6 +86,8 @@ export async function saveOutcomeList(
   db: Db,
   skillId: string,
   list: readonly ReviewedOutcome[],
+  /** The builder's answer to what kind of skill this is; the model only proposes one. */
+  kind?: SkillKind,
 ): Promise<{ slugs: string[]; added: number; retired: number }> {
   const items = list.map((o) => ({ ...DraftOutcome.parse(o), slug: o.slug }));
   if (items.length === 0) throw new Error('A list needs at least one outcome.');
@@ -120,6 +126,7 @@ export async function saveOutcomeList(
       if (row === undefined) throw new Error(`could not save ${o.name}`);
       if (!existing.has(slug)) added.push(row.id);
     }
+    if (kind !== undefined) await tx.update(skills).set({ kind }).where(eq(skills.id, skillId));
     const gone = await tx
       .update(skillOutcomes)
       .set({ retiredAt: new Date() })

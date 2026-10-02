@@ -32,7 +32,7 @@ import { codeView } from '../core/outcomes/code-view.js';
 import { loadCoverage } from '../core/outcomes/coverage.js';
 import { setGoals, stopGoal } from '../core/outcomes/goals.js';
 import { relabelLines, scanNewCommits } from '../core/outcomes/scan.js';
-import { draftOutcomes, DraftOutcome, saveOutcomeList } from '../core/outcomes/draft.js';
+import { draftOutcomes, DraftOutcome, saveOutcomeList, SKILL_KINDS } from '../core/outcomes/draft.js';
 import { modelScan } from '../core/outcomes/model-scan.js';
 import { llmStatus, providerFromEnv, type Provider } from '../core/llm/index.js';
 import {
@@ -152,6 +152,7 @@ const SettingsBody = z.object({ questionsPerWeek: z.number().int().min(MIN_PER_W
 const PracticeBody = z.object({ answer: z.string().trim().min(1).max(5000) });
 const OutcomeListBody = z.object({
   outcomes: z.array(DraftOutcome.extend({ slug: z.string().max(200).optional() })).min(1).max(20),
+  kind: z.enum(SKILL_KINDS).optional(),
 });
 const ScanBody = z.object({ skill: z.string().min(1).max(200) });
 const Limit = z.coerce.number().int().min(1).max(50).default(DEFAULT_WEEKLY_LIMIT);
@@ -482,16 +483,16 @@ export function createApp({ db, userId, login }: AppOptions): Hono {
     const draft = await draftOutcomes(db, userId, skill.name, provider());
     return c.json<DraftOutcomesResponse>(
       draft.ok
-        ? { outcomes: draft.value.outcomes, reason: null, message: null }
-        : { outcomes: null, reason: draft.reason, message: draft.message },
+        ? { kind: draft.value.kind, outcomes: draft.value.outcomes, reason: null, message: null }
+        : { kind: null, outcomes: null, reason: draft.reason, message: draft.message },
     );
   });
 
   app.put('/api/skills/:slug/outcomes', async (c) => {
     const skill = await skillBySlug(c.req.param('slug'));
-    const { outcomes } = await body(c, OutcomeListBody);
+    const { outcomes, kind } = await body(c, OutcomeListBody);
     try {
-      return c.json<SavedOutcomesResponse>(await saveOutcomeList(db, skill.id, outcomes));
+      return c.json<SavedOutcomesResponse>(await saveOutcomeList(db, skill.id, outcomes, kind));
     } catch (e) {
       throw new BadRequest((e as Error).message);
     }
