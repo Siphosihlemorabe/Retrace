@@ -1,6 +1,6 @@
 # 0009 — Detailed questions, and outcome lists for any skill, via a model you connect
 
-**Status:** agreed (2026-10-01). Matches [product-direction.md](../product-direction.md) (§3.2, 3.4)
+**Status:** built (2026-10-02); agreed 2026-10-01. Matches [product-direction.md](../product-direction.md) (§3.2, 3.4)
 **Build order:** step 2. Second of 0007 → 0009 → 0010 → 0011 → 0012 → 0008
 **Writes to the database:** yes — model call log and cache, generated questions, answers, model-drafted outcome lists, model-found sightings
 **Guardrails:** G3, G5, G6, G7, G11, G13, G14, G15, G16, G17 (see [how-it-works](../how-it-works.md#guardrails))
@@ -150,7 +150,7 @@ with `source: builder`.
 - [x] Interface and the three adapters; `claude-cli` passes `--tools ""` and `--max-turns 1`
 - [x] Zod validation; cache with the full key; call log; daily caps
 - [x] Only `src/core/llm` spawns `claude` or imports the SDK (import-graph test)
-- [ ] Consent per repo before code leaves the machine, naming the provider
+- [x] Consent per repo before code leaves the machine, naming the provider (web banner, CLI prompt)
 
 **Questions** — `src/core/questions/`
 - [x] Inputs for touched outcomes, untouched objective outcomes, and dependency candidates
@@ -161,7 +161,7 @@ with `source: builder`.
 
 **Outcome lists for any skill** — `src/core/outcomes/`
 - [x] Draft prompt and schema; save as the builder's reviewed list
-- [ ] A review screen for the draft
+- [x] A review screen for the draft (Goals tab: draft, edit, add, remove, "use this list"; or write your own)
 - [x] Model scan for those outcomes, giving sightings with `found_by: model` (reads HEAD, not
       each commit's added lines; see build notes)
 
@@ -172,16 +172,18 @@ with `source: builder`.
 - [x] `repos.llm_allowed_at`; the generated question linked to its cache entry
 
 **Web and CLI**
-- [ ] The question card: code excerpt with line numbers, who wrote it, the question, an
-      answer box
-- [ ] Settings: provider, calls left today, questions per week (min 3)
+- [x] The question card: code excerpt with line numbers, who wrote it, the question, an
+      answer box (web Ask tab and `npm run ask`)
+- [x] Settings: provider, calls left today, questions per week (min 3)
 
 **Tests**
 - [x] Each adapter against a fake (a stub `claude` on PATH, a fake HTTP server); no real model
       calls in `npm test`
 - [x] Cache hit, version bump, a malformed result rejected and the fallback used, caps
-- [ ] Copy checks: no model answer shown; key points never shown in this feature
-- [ ] **Manual:** ten real targets. Is each question only askable of *this* code, and is every
+- [x] Copy checks: no model answer shown; key points never shown in this feature (the API
+      test asserts no `keyPoints` reach the page; the prompt asks for questions only)
+- [ ] **Manual:** ten real targets. *Not run: it sends real code to the builder's model,
+      which needs their consent on a real project.* Is each question only askable of *this* code, and is every
       line reference right? Target 8 of 10
 
 **Not deliverables, on purpose:** judging (0011), notes (0010), learned status, the profile,
@@ -242,6 +244,21 @@ for practice, which is why nothing here counts. Counting starts at 0011's check.
 - **The weekly budget is shared with 0002's dependency questions**, and spent when a
   question is shown, not when it is written. A dependency question is counted only through
   `candidates.asked_at`, so the CLI and the web can't count it twice.
+- **A skip keeps its place in the week's budget.** Found by running `npm run ask`: skipping
+  cleared `shown_at`, which gave the budget back, so "question 2 of 3" appeared twice. A
+  skipped question now waits until next week, and counts again when it is shown then.
+- **Allowing the model drops queued questions nobody has seen.** Otherwise the week's
+  questions would stay rule-written after the builder said yes. Questions that were shown,
+  answered or skipped are kept.
+- **Coverage now leaves out retired outcomes.** Before, an outcome removed from a list stayed
+  in the denominator. *Open for the builder:* editing a list after using it can now raise a
+  goal's percentage by removing hard outcomes. Product-direction §3.7 says unticking must
+  never do that. Removing from the list is a different act from unticking, but the effect is
+  the same. Options: allow edits only before the first sighting, or keep retired outcomes in
+  the denominator once anything touched them.
+- **Clicked through on a scratch repo** (no model, then `claude-cli` without consent): the
+  Goals review, Ask card, consent banner and Settings all worked. No model calls were made.
+  Three wording fixes came out of it.
 
 ## Open questions
 
