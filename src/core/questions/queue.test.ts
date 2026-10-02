@@ -125,7 +125,12 @@ describe.skipIf(skipWithoutDatabase())('the question queue', () => {
     expect(stored).toHaveLength(1);
     await expect(answerQuestion(db, scope.userId, shown!.id, 'again')).rejects.toThrow(/not open/);
 
+    await markQuestionShown(db, scope.userId, second!.id);
+    const spent = (await questionBudget(db, scope.userId)).shownThisWeek;
     expect(await skipQuestion(db, scope.userId, second!.id)).toBe('pending');
+    // Skipping doesn't give the budget back, and the question waits until next week.
+    expect((await questionBudget(db, scope.userId)).shownThisWeek).toBe(spent);
+    expect((await nextQuestions(scope, null)).map((q) => q.id)).not.toContain(second!.id);
     expect(await skipQuestion(db, scope.userId, second!.id)).toBe('pending');
     expect(await skipQuestion(db, scope.userId, second!.id)).toBe('expired');
     // An expired question's outcome is not asked about again this round.

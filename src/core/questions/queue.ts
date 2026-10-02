@@ -197,7 +197,10 @@ export async function nextQuestions(
     .orderBy(questions.createdAt);
   // Candidate questions whose candidate was answered elsewhere (the CLI) are done.
   const stillOpen: StoredQuestion[] = [];
+  const weekAgo = new Date(Date.now() - WEEK_MS);
   for (const q of open) {
+    // Skipped this week: it already spent its place in the budget, and comes back next week.
+    if (q.skipCount > 0 && q.shownAt !== null && q.shownAt >= weekAgo) continue;
     if (q.candidateId !== null) {
       const [c] = await db.select({ status: candidates.status }).from(candidates).where(eq(candidates.id, q.candidateId));
       if (c?.status !== 'pending') {
@@ -251,7 +254,8 @@ export async function nextQuestions(
 export async function markQuestionShown(db: Db, userId: string, questionId: string): Promise<void> {
   const [q] = await db
     .update(questions)
-    .set({ shownAt: sql`COALESCE(${questions.shownAt}, now())` })
+    // Once per week: shown again in a later week, it counts again.
+    .set({ shownAt: sql`CASE WHEN ${questions.shownAt} IS NULL OR ${questions.shownAt} < now() - interval '7 days' THEN now() ELSE ${questions.shownAt} END` })
     .where(and(eq(questions.id, questionId), eq(questions.userId, userId)))
     .returning();
   if (q?.candidateId != null) {
@@ -280,14 +284,13 @@ export async function closeCandidateQuestion(db: Db, userId: string, candidateId
     .where(and(eq(questions.userId, userId), eq(questions.candidateId, candidateId), eq(questions.status, 'pending')));
 }
 
-/** Back to the pool; the third skip retires it. */
+/** Back to the pool from next week; the third skip retires it. Showing it already spent the budget, so a skip keeps `shown_at`. */
 export async function skipQuestion(db: Db, userId: string, questionId: string): Promise<'pending' | 'expired'> {
   const [q] = await db
     .update(questions)
     .set({
       skipCount: sql`${questions.skipCount} + 1`,
       status: sql`CASE WHEN ${questions.skipCount} + 1 >= 3 THEN 'expired' ELSE 'pending' END`,
-      shownAt: null,
     })
     .where(and(eq(questions.id, questionId), eq(questions.userId, userId), eq(questions.status, 'pending')))
     .returning({ status: questions.status });
